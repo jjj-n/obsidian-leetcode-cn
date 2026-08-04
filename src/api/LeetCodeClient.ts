@@ -8,6 +8,7 @@
 import { LeetCodeAdvanced, LeetCodeCN, Credential, CredentialCN } from '@leetnotion/leetcode-api';
 import type { PastContests, ContestQuestions } from '@leetnotion/leetcode-api';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { fetchCNProblemDetail } from './LeetCodeCNAdapter';
 
 /** LC's `question` object as returned by `lc.problem(slug)`.
  *  Only the fields we consume are declared; LC returns additional fields we ignore.
@@ -140,9 +141,9 @@ export class LeetCodeClient {
    *  and shows an appropriate Notice).
    */
   async getProblemDetail(slug: string): Promise<LeetCodeProblemDetail | null> {
-    // Re-throw is implicit (no try/catch) — NoteWriter's error dispatch
-    // (D-13 + Shared Pattern C) decides between session-expired and the
-    // generic couldn't-fetch notice based on `isSessionExpired(err)`.
+    if (this.settings.getRegion() === 'cn') {
+      return fetchCNProblemDetail(this.lcCN, slug);
+    }
     const q = await (this.lc as unknown as {
       problem: (s: string) => Promise<LeetCodeProblemDetail | null>;
     }).problem(slug);
