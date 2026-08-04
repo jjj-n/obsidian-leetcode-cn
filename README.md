@@ -1,14 +1,48 @@
-# LeetCode for Obsidian
+# LeetCode CN for Obsidian
 
-Browse, solve, and note LeetCode problems inside your Obsidian vault. Every
-solved problem becomes a first-class note — tagged, linked, and discoverable —
-so practice builds a knowledge graph instead of scattered code files.
+> **致谢 / Acknowledgment**
+>
+> 本插件 fork 自 [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode)，扩展支持 leetcode.cn。核心基础设施（widget 同步、HTTP 节流、模板渲染等）来自上游项目，按 MIT 许可证保留原始版权声明。
+>
+> This plugin is a fork of [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode), extended to support leetcode.cn. Core infrastructure (widget/sync, HTTP throttling, template rendering, etc.) is from the upstream project, with original copyright retained under the MIT license.
 
-This plugin communicates with `leetcode.com` to fetch problems and submit
-solutions. See the [Network usage](#network-usage) section below for the
-full list of hosts contacted.
+---
 
-## v1.3 — Inline widget architecture
+把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中——数学公式、代码、图片格式全部保留，粘贴不再坏掉。每道刷过的题都变成 Obsidian vault 里可搜索、可链接、可离线阅读的一等笔记。
+
+Fetch leetcode.cn problems, your AC submissions, and community solutions into your Obsidian vault — with math formulas, code blocks, and images preserved. Every solved problem becomes a first-class note: tagged, linked, and discoverable.
+
+本插件与 `leetcode.cn` 通信以抓取题目和题解。完整的主机列表见下方 [网络使用](#网络使用-network-usage) 章节。
+
+This plugin communicates with `leetcode.cn` to fetch problems and solutions. See the [Network usage](#网络使用-network-usage) section below for the full list of hosts contacted.
+
+## 核心特性 / Core Features
+
+- 登录 leetcode.cn（嵌入式浏览器 + cookie 手动粘贴兜底）
+- 抓取题面（HTML → Obsidian Markdown，数学公式、上下标、代码块、图片格式全部保留）
+- 抓取你的 AC 提交代码（fallback 到题目 starter code）
+- 抓取社区题解文章（自动拆 `## 题解` 代码块 + `## 题解思路` 思路）
+- 可配置笔记模板 + 占位符（`{{problem}}` / `{{code}}` / `{{solution}}` 等）
+- 支持 8 种 LC 语言（Python, Java, C++, C, JavaScript, TypeScript, Go, Rust）
+- 多题一笔记 + 一题多解法
+- 完全灵活的 frontmatter schema（任何 Dataview 字段名都能适配）
+
+- Login to leetcode.cn (embedded browser + manual cookie paste fallback)
+- Fetch problem statements (HTML → Obsidian Markdown, math/sup/sub/code/images preserved)
+- Fetch your AC submission code (fallback to starter code)
+- Fetch community solution articles (auto-split into `## 题解` code + `## 题解思路` approach)
+- Configurable note template + placeholders (`{{problem}}` / `{{code}}` / `{{solution}}` etc.)
+- Support all 8 LC languages (Python, Java, C++, C, JS, TS, Go, Rust)
+- Multi-problem-per-note + multi-solution-per-problem
+- Fully flexible frontmatter schema (adapts to any Dataview property names)
+
+## 上游版本说明 / Upstream Version Note
+
+本仓库基于上游 `LikeSundayLikeRain/obsidian-leetcode` v1.3.2 fork。由于本插件走 workflow A（纯笔记本模式，不在 Obsidian 内 Run/Submit 代码），v1.3 引入的 widget / solve / ai / contest / preview 模块已删除。
+
+This repo is forked from upstream `LikeSundayLikeRain/obsidian-leetcode` v1.3.2. Since this plugin uses workflow A (pure notebook mode — no Run/Submit inside Obsidian), the v1.3-introduced widget / solve / ai / contest / preview modules have been removed.
+
+## v1.3 — Inline widget architecture (upstream)
 
 **v1.3** introduces an inline widget architecture: every `leetcode-solve`
 fence renders as a self-contained CodeMirror editor inside your note, with
