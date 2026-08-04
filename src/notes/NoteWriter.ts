@@ -90,6 +90,7 @@ export interface NoteWriterDetail {
 export interface NoteWriterSettings {
   getProblemsFolder(): string;
   getDefaultLanguage(): string;
+  getRegion(): 'com' | 'cn';
   getProblemDetail(slug: string): DetailCacheEntry | null;
   setProblemDetail(slug: string, detail: DetailCacheEntry): Promise<void>;
 }
@@ -418,7 +419,7 @@ export class NoteWriter {
     }
 
     // Build + persist the cache entry.
-    const newEntry = toDetailCacheEntry(detail);
+    const newEntry = toDetailCacheEntry(detail, this.settings.getRegion());
     await this.settings.setProblemDetail(slug, newEntry);
 
     // Ensure folder exists before vault.create (D-22 + Pitfall 3).
@@ -563,7 +564,7 @@ export class NoteWriter {
   private async backgroundRefresh(file: TFile, slug: string): Promise<void> {
     const detail = await this.client.getProblemDetail(slug);
     if (!detail || !detail.content) return;   // silent; no Notice per D-12
-    const entry = toDetailCacheEntry(detail);
+    const entry = toDetailCacheEntry(detail, this.settings.getRegion());
     await this.settings.setProblemDetail(slug, entry);
 
     const freshMarkdown = htmlToMarkdown(entry.contentHtml);
@@ -653,7 +654,7 @@ export class NoteWriter {
     // Persist the fresh cache entry first — subsequent background-refresh
     // invocations on this slug see the new fetchedAt timestamp and skip the
     // network hop until the 7-day TTL elapses.
-    const entry = toDetailCacheEntry(detail);
+    const entry = toDetailCacheEntry(detail, this.settings.getRegion());
     await this.settings.setProblemDetail(slug, entry);
 
     // Rewrite the plugin-owned `## Problem` region; everything else is
@@ -717,13 +718,14 @@ function pickStarterCode(entry: DetailCacheEntry, langSlug: string): string {
  * IDENTICAL to v1.0 (existing internal callers in this module — openProblem,
  * backgroundRefresh, forceRefresh — keep working with the same in-module
  * import resolution; only the keyword is added). */
-export function toDetailCacheEntry(raw: NoteWriterDetail): DetailCacheEntry {
+export function toDetailCacheEntry(raw: NoteWriterDetail, region: 'com' | 'cn' = 'cn'): DetailCacheEntry {
+  const baseUrl = region === 'com' ? 'https://leetcode.com' : 'https://leetcode.cn';
   return {
     fetchedAt: Date.now(),
     id: Number(raw.questionFrontendId) || 0,
     title: raw.title,
     difficulty: raw.difficulty,
-    url: `https://leetcode.com/problems/${raw.titleSlug}/`,
+    url: `${baseUrl}/problems/${raw.titleSlug}/`,
     contentHtml: raw.content ?? '',
     topicSlugs: Array.isArray(raw.topicTags)
       ? raw.topicTags.map((t) => String(t?.slug ?? '')).filter((s) => s.length > 0)

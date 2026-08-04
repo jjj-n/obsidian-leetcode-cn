@@ -129,6 +129,22 @@ export class LeetCodeSettingTab extends PluginSettingTab {
       });
 
     // =============================
+    //   Region setting (Ticket #1)
+    // =============================
+    new Setting(containerEl)
+      .setName('Region')
+      .setDesc('LeetCode site to connect to. leetcode.cn for Chinese users; leetcode.com for international.')
+      .addDropdown((d) => d
+        .addOption('cn', 'leetcode.cn')
+        .addOption('com', 'leetcode.com')
+        .setValue(this.plugin.lcSettings.getRegion())
+        .onChange(async (v) => {
+          await this.plugin.lcSettings.setRegion(v as 'com' | 'cn');
+          new Notice(`Region changed to ${v === 'cn' ? 'leetcode.cn' : 'leetcode.com'}. Existing notes keep their original URLs; new notes will use this region.`, 5000);
+        }),
+      );
+
+    // =============================
     //   Manual cookie (fallback) — D-05 first-class, inside Auth section per D-09
     // =============================
     let sessionVal = '';

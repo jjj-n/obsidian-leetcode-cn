@@ -12,6 +12,7 @@ function makeMockSettings(initial: { problemsFolder?: string; defaultLanguage?: 
     setProblemsFolder: async (v: string) => { folder = v; },
     getDefaultLanguage: () => lang,
     setDefaultLanguage: async (v: string) => { lang = v; },
+    getRegion: () => 'cn' as const,
     getProblemDetail: (slug: string) => details.get(slug) ?? null,
     setProblemDetail: async (slug: string, d: unknown) => { details.set(slug, d); },
     pruneProblemDetails: async () => 0,

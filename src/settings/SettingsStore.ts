@@ -63,8 +63,16 @@ export interface DetailCacheEntry {
   topicTags?: Array<{ name: string; slug: string }>;
 }
 
+export type LeetCodeRegion = 'com' | 'cn';
+
+const VALID_REGIONS: ReadonlySet<LeetCodeRegion> = new Set<LeetCodeRegion>(['com', 'cn']);
+
 export interface PluginData {
   version: 1;
+  /** Ticket #1 — per-vault LeetCode region. 'cn' = leetcode.cn (default for
+   *  the cn fork); 'com' = leetcode.com (seam for future use). Shape-guard
+   *  collapses anything that isn't literally 'com' or 'cn' to 'cn'. */
+  region: LeetCodeRegion;
   auth: AuthCookies | null;
   username: string | null;
   /** Whether the signed-in user has LC Premium. Controls the default-hide-premium
@@ -271,6 +279,7 @@ const DEFAULT_PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig | BedrockProvi
 
 const DEFAULT_DATA: PluginData = {
   version: 1,
+  region: 'cn',
   auth: null,
   username: null,
   isPremium: null,
@@ -678,6 +687,9 @@ export class SettingsStore {
       : {};
     const data: PluginData = {
       version: 1,
+      region: (typeof raw.region === 'string' && VALID_REGIONS.has(raw.region as LeetCodeRegion))
+        ? (raw.region as LeetCodeRegion)
+        : DEFAULT_DATA.region,
       auth: isValidAuthCookies(raw.auth) ? raw.auth : DEFAULT_DATA.auth,
       username: typeof raw.username === 'string' ? raw.username : DEFAULT_DATA.username,
       isPremium: typeof raw.isPremium === 'boolean' ? raw.isPremium : DEFAULT_DATA.isPremium,
@@ -841,6 +853,32 @@ export class SettingsStore {
   async setAuthCookies(c: AuthCookies | null): Promise<void> {
     this.data.auth = c;
     await this.persist();
+  }
+
+  /** Ticket #1 — read the per-vault LeetCode region. */
+  getRegion(): LeetCodeRegion { return this.data.region; }
+
+  /** Ticket #1 — persist the per-vault LeetCode region. */
+  async setRegion(r: LeetCodeRegion): Promise<void> {
+    this.data.region = r;
+    await this.persist();
+  }
+
+  /** Ticket #1 — region-aware base URL (no trailing slash). */
+  getBaseUrl(): string {
+    return this.data.region === 'com'
+      ? 'https://leetcode.com'
+      : 'https://leetcode.cn';
+  }
+
+  /** Ticket #1 — region-aware login page URL. */
+  getLoginUrl(): string {
+    return `${this.getBaseUrl()}/accounts/login/`;
+  }
+
+  /** Ticket #1 — region-aware problem detail URL. */
+  getProblemUrl(slug: string): string {
+    return `${this.getBaseUrl()}/problems/${slug}/`;
   }
 
   getProblemsFolder(): string { return this.data.problemsFolder; }
