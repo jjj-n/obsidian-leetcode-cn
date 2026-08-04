@@ -168,7 +168,7 @@ Only one preview tab is open at a time — clicking another problem reuses the s
 
 This plugin communicates with the following hosts:
 
-- `leetcode.com` — fetch problems, submit solutions, poll verdicts. Contest API operations (contest list via `leetcode.com/graphql`, contest ranking/detail via `leetcode.com/contest/`) use the same authenticated session. **All LeetCode traffic** uses Obsidian's built-in `requestUrl`; no other code path touches `leetcode.com`.
+- `leetcode.cn` / `leetcode.com` — depending on Region setting, fetches problems, submissions, and solution articles from the selected LeetCode site. All traffic uses Obsidian's built-in `requestUrl`. Switching regions does not modify existing notes.
 - AI provider hosts — only when you have configured an active AI provider in Settings → AI. The plugin contacts at most ONE of these per AI call, depending on your `Active AI provider` selection:
   - `https://api.anthropic.com` — when `Active AI provider = Anthropic`
   - `https://api.openai.com` — when `Active AI provider = OpenAI`
