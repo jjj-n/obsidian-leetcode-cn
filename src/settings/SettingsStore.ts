@@ -5,9 +5,24 @@
 import type { Plugin } from 'obsidian';
 import type { AuthCookies } from '../auth/types';
 import type { IndexedProblem, ProblemIndex } from '../browse/types';
-import type { AIProvider, ProviderConfig, BedrockProviderConfig, AICostLedger } from '../ai/types';
-import type { ContestSession, ContestIndex } from '../contest/types';
 import { logger } from '../shared/logger';
+
+// Stub types for backward compat — AI provider and contest features were
+// removed in the cn fork (workflow A). The fields using these types are
+// preserved in PluginData for backward-compatible data.json loading, but
+// are not actively used. These stubs will be cleaned up in a future commit.
+// Using `any` liberally to avoid cascading type errors at call sites.
+export type AIProvider = 'anthropic' | 'openai' | 'openrouter' | 'ollama' | 'custom' | 'bedrock';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ProviderConfig = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type BedrockProviderConfig = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AICostLedger = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ContestSession = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ContestIndex = Record<string, any>;
 
 export type { AuthCookies } from '../auth/types';
 

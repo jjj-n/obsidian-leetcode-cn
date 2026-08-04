@@ -10,12 +10,13 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type LeetCodePlugin from '../main';
 import type { AuthCookies } from '../auth/types';
-import type { AIProvider, BedrockProviderConfig } from '../ai/types';
+import type { AIProvider, BedrockProviderConfig } from './SettingsStore';
 // Phase 07 Plan 04 — single source of truth for provider display names; the
 // local copy of `prettyName` was moved to src/ai/types.ts so main.ts (Notice
 // copy) and SettingsTab.ts (sub-form) render identical brand strings without
 // duplication. 07-UI-SPEC.md §"Copywriting Contract" remains the locked spec.
-import { prettyName } from '../ai/types';
+// Stubbed in cn fork — AI features removed in workflow A.
+const prettyName = (p: AIProvider): string => String(p);
 
 // Phase 07 Plan 03 — model placeholders per provider, locked by 07-UI-SPEC.md
 // §"Copywriting Contract" (Model placeholders row).
@@ -34,6 +35,7 @@ function modelPlaceholder(p: AIProvider): string {
     case 'ollama': return 'llama3.2';
     case 'custom': return '';
     case 'bedrock': return '';
+    default: return '';
   }
 }
 

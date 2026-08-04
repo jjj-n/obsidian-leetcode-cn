@@ -36,7 +36,6 @@ import { Notice, TFile, MarkdownView } from 'obsidian';
 import type { App } from 'obsidian';
 import { isSessionExpired } from '../api/LeetCodeClient';
 import { logger } from '../shared/logger';
-import { showSessionExpiredNotice } from '../solve/SessionExpiredNotice';
 import {
   applyFrontmatter,
   buildFrontmatterInput,
@@ -402,8 +401,8 @@ export class NoteWriter {
         ? (err as { response?: unknown }).response
         : undefined;
       if (isSessionExpired(err) || isSessionExpired(maybeResp)) {
-        // D-21: sticky Notice + Log in button.
-        showSessionExpiredNotice(this.login ?? (() => undefined));
+        // D-21: session expired — prompt user to re-login via settings.
+        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
         return;
       }
       // Generic network failure (D-13): Notice + abort, no partial file.
@@ -637,8 +636,8 @@ export class NoteWriter {
         ? (err as { response?: unknown }).response
         : undefined;
       if (isSessionExpired(err) || isSessionExpired(maybeResp)) {
-        // D-21: sticky Notice + Log in button.
-        showSessionExpiredNotice(this.login ?? (() => undefined));
+        // D-21: session expired — prompt user to re-login via settings.
+        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
         return;
       }
       const displayTitle = cached?.title ?? slug;
