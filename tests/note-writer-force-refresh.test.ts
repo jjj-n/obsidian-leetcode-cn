@@ -46,6 +46,7 @@ function makeSettingsWithCache(entry: DetailShape | null) {
     getDefaultLanguage: () => 'python3',
     setDefaultLanguage: async () => undefined,
     getRegion: () => 'cn' as const,
+    getNoteTemplate: () => '',
     getProblemDetail: (slug: string) => details.get(slug) ?? null,
     setProblemDetail: async (slug: string, d: DetailShape) => { details.set(slug, d); },
     pruneProblemDetails: async () => 0,

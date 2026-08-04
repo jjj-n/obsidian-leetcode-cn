@@ -39,10 +39,10 @@ import { logger } from '../shared/logger';
 import {
   applyFrontmatter,
   buildFrontmatterInput,
-  buildNoteBody,
   buildNotePath,
   mapStatusDisplay,
 } from './NoteTemplate';
+import { renderTemplate, buildTemplateData, DEFAULT_TEMPLATE } from './TemplateEngine';
 import { htmlToMarkdown } from './htmlToMarkdown';
 import { rewriteProblemSection } from './HeadingRegion';
 import { ensureLeetcodeBase } from './BaseFile';
@@ -91,6 +91,7 @@ export interface NoteWriterSettings {
   getProblemsFolder(): string;
   getDefaultLanguage(): string;
   getRegion(): 'com' | 'cn';
+  getNoteTemplate(): string;
   getProblemDetail(slug: string): DetailCacheEntry | null;
   setProblemDetail(slug: string, detail: DetailCacheEntry): Promise<void>;
 }
@@ -471,14 +472,22 @@ export class NoteWriter {
     // Create the file with body; frontmatter comes on a separate pass via processFrontMatter.
     const defaultLang = this.settings.getDefaultLanguage();
     const starterCode = pickStarterCode(newEntry, defaultLang);
-    // Phase 22 — `useInlineWidget` master gate retired; the v1.3 emitter
-    // (`\`\`\`leetcode-solve`) is now the unconditional path.
-    const body = buildNoteBody({
-      problemMarkdown: htmlToMarkdown(newEntry.contentHtml),
-      langSlug: defaultLang || undefined,
-      starterCode,
+    const problemMarkdown = htmlToMarkdown(newEntry.contentHtml);
+    const tagNames = (newEntry.topicTags ?? []).map((t) => t.name).join(', ');
+    const templateData = buildTemplateData({
+      slug: slug,
+      id: newEntry.id,
       title: newEntry.title,
+      title_cn: newEntry.title, // cn title — will be enriched in Ticket #3 when LC returns translatedTitle
+      difficulty: newEntry.difficulty,
+      url: newEntry.url,
+      language: defaultLang,
+      problemMarkdown,
+      starterCode,
+      tagsLabel: tagNames || newEntry.difficulty.toLowerCase(),
     });
+    const template = this.settings.getNoteTemplate() || DEFAULT_TEMPLATE;
+    const body = renderTemplate(template, templateData);
     const createdRaw = await this.app.vault.create(filePath, body);
     const file = narrowToTFile(createdRaw);
 

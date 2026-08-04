@@ -11,6 +11,7 @@ function makeMockSettings(folder: string) {
     getDefaultLanguage: () => 'python3',
     setDefaultLanguage: async () => undefined,
     getRegion: () => 'cn' as const,
+    getNoteTemplate: () => '',
     getProblemDetail: (slug: string) => details.get(slug) ?? null,
     setProblemDetail: async (slug: string, d: unknown) => { details.set(slug, d); },
     pruneProblemDetails: async () => 0,

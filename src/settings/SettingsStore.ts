@@ -191,6 +191,10 @@ export interface PluginData {
   autoAIKnowledgeGraph: boolean;
   /** Phase 11 AIKG-06 — feature flags for experimental KG behaviors. */
   featureFlags: { lookAheadEdges: boolean };
+  /** Ticket #5 — user-configurable note template. Empty string = use built-in
+   *  default. Stored as-is; renderTemplate replaces {{placeholders}} at note
+   *  creation time. */
+  noteTemplate: string;
 }
 
 /** Compound filter matching LC's "Match All/Any of the following" UI. Each
@@ -319,6 +323,7 @@ const DEFAULT_DATA: PluginData = {
   contestIndex: null,
   autoAIKnowledgeGraph: true,  // AIKG-01 default ON — core feature
   featureFlags: { lookAheadEdges: false },  // AIKG-06 default OFF — experimental
+  noteTemplate: '',  // '' = use built-in DEFAULT_TEMPLATE
 };
 
 const VALID_DIFFICULTIES = new Set(['Easy', 'Medium', 'Hard']);
@@ -824,6 +829,9 @@ export class SettingsStore {
         && typeof (raw.featureFlags as Record<string, unknown>).lookAheadEdges === 'boolean')
         ? { lookAheadEdges: (raw.featureFlags as Record<string, unknown>).lookAheadEdges as boolean }
         : DEFAULT_DATA.featureFlags,
+      noteTemplate: typeof raw.noteTemplate === 'string' && raw.noteTemplate.length > 0
+        ? raw.noteTemplate
+        : DEFAULT_DATA.noteTemplate,
     };
     // Warn without leaking values so a user whose disk file is corrupt knows
     // why they unexpectedly see a logged-out state or a fresh index refetch.
@@ -1065,6 +1073,15 @@ export class SettingsStore {
 
   async setFeatureFlag(key: 'lookAheadEdges', value: boolean): Promise<void> {
     this.data.featureFlags = { ...this.data.featureFlags, [key]: value };
+    await this.persist();
+  }
+
+  /** Ticket #5 — read the user's note template. Empty = use built-in default. */
+  getNoteTemplate(): string { return this.data.noteTemplate; }
+
+  /** Ticket #5 — persist the user's note template. */
+  async setNoteTemplate(v: string): Promise<void> {
+    this.data.noteTemplate = v;
     await this.persist();
   }
 
