@@ -5,7 +5,7 @@
 // OWNERSHIP: `isSessionExpired` is defined here and ONLY here (AUTH-04). Plan 03
 // (AuthService) and Plan 06 (ProblemBrowserView) both call it from error paths.
 // Neither redefines it.
-import { LeetCodeAdvanced, Credential } from '@leetnotion/leetcode-api';
+import { LeetCodeAdvanced, LeetCodeCN, Credential, CredentialCN } from '@leetnotion/leetcode-api';
 import type { PastContests, ContestQuestions } from '@leetnotion/leetcode-api';
 import type { SettingsStore } from '../settings/SettingsStore';
 
@@ -42,19 +42,13 @@ export interface LeetCodeProblemDetail {
 
 export class LeetCodeClient {
   public lc!: InstanceType<typeof LeetCodeAdvanced>;
+  public lcCN!: InstanceType<typeof LeetCodeCN>;
   private settings: SettingsStore;
 
   constructor(settings: SettingsStore) {
     this.settings = settings;
-    // WR-01: construct with an UNAUTHENTICATED baseline synchronously so the
-    // .lc field is never undefined. If cookies exist, the caller (main.ts
-    // onload / AuthService after login) MUST await reauthenticate() to bind
-    // the credential. Previously we fire-and-forgot `void cred.init(...)` —
-    // if init rejected, the rejection became an unhandled promise rejection
-    // and the client was left attached to a partially-initialised Credential,
-    // causing API calls to return null data indistinguishable from session
-    // expiry and triggering a spurious logout notice.
     this.lc = new LeetCodeAdvanced();
+    this.lcCN = new LeetCodeCN();
   }
 
   /** Rebuild the LeetCode client with current cookies and await Credential bootstrap.
@@ -62,13 +56,21 @@ export class LeetCodeClient {
    *  the LC client's credential is fully initialized before the first API call. */
   async reauthenticate(): Promise<void> {
     const cookies = this.settings.getAuthCookies();
+    const region = this.settings.getRegion();
     if (!cookies) {
       this.lc = new LeetCodeAdvanced();
+      this.lcCN = new LeetCodeCN();
       return;
     }
-    const cred = new Credential();
-    await cred.init(cookies.LEETCODE_SESSION);
-    this.lc = new LeetCodeAdvanced(cred);
+    if (region === 'cn') {
+      const cred = new CredentialCN();
+      await cred.init(cookies.LEETCODE_SESSION);
+      this.lcCN = new LeetCodeCN(cred);
+    } else {
+      const cred = new Credential();
+      await cred.init(cookies.LEETCODE_SESSION);
+      this.lc = new LeetCodeAdvanced(cred);
+    }
   }
 
   /** Fetch the signed-in user's username via LC's `whoami` GraphQL query.
@@ -76,6 +78,14 @@ export class LeetCodeClient {
    *  use the result for UI display only (settings tab Status line). */
   async fetchUsername(): Promise<string | null> {
     try {
+      if (this.settings.getRegion() === 'cn') {
+        const resp = await this.lcCN.graphql({
+          query: 'query { userStatus { isSignedIn username } }',
+        }) as { data?: { userStatus?: { isSignedIn?: boolean; username?: string } } };
+        const u = resp?.data?.userStatus;
+        if (!u || !u.isSignedIn || !u.username) return null;
+        return u.username;
+      }
       const resp = await (this.lc as unknown as {
         whoami: () => Promise<{ username?: string; isSignedIn?: boolean } | null>;
       }).whoami();
@@ -90,6 +100,17 @@ export class LeetCodeClient {
    *  round-trip. Returns null if not signed in or on error. */
   async fetchWhoami(): Promise<{ username: string; isPremium: boolean | null } | null> {
     try {
+      if (this.settings.getRegion() === 'cn') {
+        const resp = await this.lcCN.graphql({
+          query: 'query { userStatus { isSignedIn username isPremium } }',
+        }) as { data?: { userStatus?: { isSignedIn?: boolean; username?: string; isPremium?: boolean | null } } };
+        const u = resp?.data?.userStatus;
+        if (!u || !u.isSignedIn || !u.username) return null;
+        return {
+          username: u.username,
+          isPremium: typeof u.isPremium === 'boolean' ? u.isPremium : null,
+        };
+      }
       const resp = await (this.lc as unknown as {
         whoami: () => Promise<
           { username?: string; isSignedIn?: boolean; isPremium?: boolean | null } | null

@@ -54,7 +54,7 @@ describe('tryCaptureCookies (issue #16, AUTH-02, AUTH-06)', () => {
       { name: 'csrftoken', value: 'C', domain: '.leetcode.com' },
     ]);
 
-    const result = await tryCaptureCookies(handle.api);
+    const result = await tryCaptureCookies(handle.api, 'com');
 
     expect(handle.calls).toHaveLength(1);
     const filter = handle.calls[0];
@@ -76,7 +76,7 @@ describe('tryCaptureCookies (issue #16, AUTH-02, AUTH-06)', () => {
       { name: 'csrftoken', value: 'CsrfHostOnly' },
     ]);
 
-    const result = await tryCaptureCookies(handle.api);
+    const result = await tryCaptureCookies(handle.api, 'com');
 
     expect(result).toEqual({
       LEETCODE_SESSION: 'SessionVal',
@@ -89,7 +89,7 @@ describe('tryCaptureCookies (issue #16, AUTH-02, AUTH-06)', () => {
       { name: 'LEETCODE_SESSION', value: 'S', domain: '.leetcode.com' },
     ]);
 
-    const result = await tryCaptureCookies(handle.api);
+    const result = await tryCaptureCookies(handle.api, 'com');
 
     expect(result).toBeNull();
   });
@@ -103,7 +103,7 @@ describe('tryCaptureCookies (issue #16, AUTH-02, AUTH-06)', () => {
       throw new Error('transient');
     });
 
-    const result = await tryCaptureCookies(handle.api);
+    const result = await tryCaptureCookies(handle.api, 'com');
 
     expect(result).toBeNull();
     // AUTH-06: catch is bare — never logs error message, cookie list, or

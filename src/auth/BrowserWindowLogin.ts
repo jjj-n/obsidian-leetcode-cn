@@ -90,9 +90,11 @@ export interface ElectronCookiesApi {
  */
 export async function tryCaptureCookies(
   cookies: ElectronCookiesApi,
+  region: 'com' | 'cn' = 'cn',
 ): Promise<AuthCookies | null> {
+  const cookieUrl = region === 'com' ? 'https://leetcode.com/' : 'https://leetcode.cn/';
   try {
-    const list = await cookies.get({ url: 'https://leetcode.com/' });
+    const list = await cookies.get({ url: cookieUrl });
     return extractAuthCookies(list);
   } catch {
     // AUTH-06: never log cookie data on failure; next event will retry.
@@ -165,7 +167,10 @@ const LOGIN_CAPTURE_TIMEOUT_MS = 30_000;
  * - Pitfall 3: webPreferences.partition uses a named persisted session to isolate
  *   cookies from other plugins.
  */
-export function openLogin(): Promise<OpenLoginResult> {
+export function openLogin(region: 'com' | 'cn' = 'cn'): Promise<OpenLoginResult> {
+  const loginUrl = region === 'com'
+    ? 'https://leetcode.com/accounts/login/'
+    : 'https://leetcode.cn/accounts/login/';
   // Obsidian runs plugins in the renderer process. `require('electron')` from
   // renderer context exposes a different surface than main process — the
   // `BrowserWindow` constructor lives under `.remote` (shimmed by Obsidian's
@@ -254,7 +259,7 @@ export function openLogin(): Promise<OpenLoginResult> {
       if (resolved) return;
       // Delegate to the exported helper so the unit test that mocks
       // `cookies.get` covers the production filter shape (issue #16).
-      const extracted = await tryCaptureCookies(win.webContents.session.cookies);
+      const extracted = await tryCaptureCookies(win.webContents.session.cookies, region);
       if (extracted && !resolved) {
         settle({ kind: 'success', cookies: extracted });
         safeClose();
@@ -273,7 +278,7 @@ export function openLogin(): Promise<OpenLoginResult> {
     // hang forever. Catch, resolve cancelled, and force-close so the auth
     // flow always settles (CR-05). Semantically still a cancel — user did
     // not log in.
-    win.loadURL('https://leetcode.com/accounts/login/').catch(() => {
+    win.loadURL(loginUrl).catch(() => {
       settle({ kind: 'cancelled' });
       safeClose();
     });

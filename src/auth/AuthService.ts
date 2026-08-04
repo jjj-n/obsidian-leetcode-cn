@@ -24,7 +24,7 @@ export class AuthService {
    * AUTH-01, AUTH-02.
    */
   async login(): Promise<boolean> {
-    const result = await openLogin();
+    const result = await openLogin(this.settings.getRegion());
     switch (result.kind) {
       case 'cancelled': {
         // D-04 silent cancel: exactly ONE Notice, no modal stacking, no auto-pivot to paste.
