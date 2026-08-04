@@ -24,6 +24,8 @@ export interface LeetCodeProblemDetail {
   questionId?: string | null;
   titleSlug: string;
   title: string;
+  /** cn localized title (`translatedTitle`). See `DetailCacheEntry.titleCn`. */
+  translatedTitle?: string | null;
   content: string | null;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   isPaidOnly: boolean;

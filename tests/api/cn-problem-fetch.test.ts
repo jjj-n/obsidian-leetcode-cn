@@ -114,6 +114,7 @@ describe('fetchCNProblemDetail', () => {
       questionId: '42',
       titleSlug: 'two-sum',
       title: 'Two Sum',
+      translatedTitle: '两数之和',
       content: '<p>中文题面</p>',
       difficulty: 'Easy',
       isPaidOnly: false,

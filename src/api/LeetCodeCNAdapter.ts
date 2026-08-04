@@ -67,10 +67,11 @@ export async function fetchCNProblemDetail(
   if (!q || !q.questionFrontendId) return null;
 
   return {
-    questionFrontendId: q.questionFrontendId!,
+    questionFrontendId: q.questionFrontendId,
     questionId: q.questionId ?? undefined,
     titleSlug: q.titleSlug ?? slug,
     title: q.title ?? '',
+    translatedTitle: q.translatedTitle ?? null,
     content: q.translatedContent ?? q.content ?? null,
     difficulty: q.difficulty ?? 'Easy',
     isPaidOnly: q.isPaidOnly ?? false,

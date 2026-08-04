@@ -39,7 +39,10 @@ const BUILTIN_PLACEHOLDERS: Record<string, keyof TemplateData> = {
 
 /** Default template — matches spec §2.13.
  *  Plugin-owned regions use HTML comments (`<!-- lc:problem -->`) as anchors.
- *  `lc-language` in frontmatter is the single source of truth for code language. */
+ *  `lc-language` in frontmatter is the single source of truth for code language.
+ *  FIXME (region-seam): `lc-region: cn` is hardcoded; when a future .com toggle
+ *  lands, this must become `{{region}}` so the rendered note reflects the
+ *  actual region. Tracked for ticket 11 (store compliance) / region-seam work. */
 export const DEFAULT_TEMPLATE = `---
 lc-slug: {{slug}}
 lc-url: {{url}}

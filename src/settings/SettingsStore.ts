@@ -36,6 +36,10 @@ export interface DetailCacheEntry {
   fetchedAt: number;
   id: number;
   title: string;
+  /** cn localized title (from `translatedTitle` in cn GraphQL). Callers fall
+   *  back to `title` when absent. Optional for backward-compat with entries
+   *  written before this field existed. */
+  titleCn?: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   url: string;
   contentHtml: string;
@@ -458,6 +462,10 @@ function isValidDetailCacheEntry(v: unknown): v is DetailCacheEntry {
   // the field remain valid (Phase 2 backward compat); malformed non-string
   // rejects the whole entry (T-03-03-03 threat mitigation).
   if (d.internalQuestionId !== undefined && typeof d.internalQuestionId !== 'string') return false;
+  // Ticket #01 tracer-bullet — titleCn optional string. Old entries without
+  // the field remain valid; malformed non-string rejects the whole entry
+  // (same threat-mitigation posture as internalQuestionId above).
+  if (d.titleCn !== undefined && typeof d.titleCn !== 'string') return false;
   // Phase 4 D-12 + Pitfall 10 — topicTags optional array of {name, slug}
   // pairs. Old Phase 2 cache entries without the field remain valid (undefined
   // is accepted); malformed entries (non-array, or array elements missing

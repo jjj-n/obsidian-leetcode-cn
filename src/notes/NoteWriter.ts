@@ -74,6 +74,8 @@ export interface NoteWriterDetail {
   questionId?: string | null;
   titleSlug: string;
   title: string;
+  /** cn localized title. See `DetailCacheEntry.titleCn`. */
+  translatedTitle?: string | null;
   content: string | null;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   isPaidOnly: boolean;
@@ -478,7 +480,7 @@ export class NoteWriter {
       slug: slug,
       id: newEntry.id,
       title: newEntry.title,
-      title_cn: newEntry.title, // cn title — will be enriched in Ticket #3 when LC returns translatedTitle
+      title_cn: newEntry.titleCn ?? newEntry.title,
       difficulty: newEntry.difficulty,
       url: newEntry.url,
       language: defaultLang,
@@ -733,12 +735,24 @@ export function toDetailCacheEntry(raw: NoteWriterDetail, region: 'com' | 'cn' =
     fetchedAt: Date.now(),
     id: Number(raw.questionFrontendId) || 0,
     title: raw.title,
+    // Ticket #01 tracer-bullet: surface cn translatedTitle into cache so the
+    // note's H1 and frontmatter use the Chinese title when available.
+    titleCn: typeof raw.translatedTitle === 'string' && raw.translatedTitle.length > 0
+      ? raw.translatedTitle
+      : undefined,
     difficulty: raw.difficulty,
     url: `${baseUrl}/problems/${raw.titleSlug}/`,
     contentHtml: raw.content ?? '',
     topicSlugs: Array.isArray(raw.topicTags)
       ? raw.topicTags.map((t) => String(t?.slug ?? '')).filter((s) => s.length > 0)
       : [],
+    // Propagate display-name-bearing topicTags so NoteWriter.openProblem can
+    // build a Chinese `tags` label from `name`s.
+    topicTags: Array.isArray(raw.topicTags)
+      ? raw.topicTags
+          .filter((t) => t && typeof t.slug === 'string' && typeof t.name === 'string')
+          .map((t) => ({ name: t.name, slug: t.slug }))
+      : undefined,
     exampleTestcases: raw.exampleTestcases,
     metaData: raw.metaData,
     sampleTestCase: raw.sampleTestCase,
