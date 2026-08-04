@@ -44,6 +44,8 @@ import {
 } from './NoteTemplate';
 import { renderTemplate, buildTemplateData, DEFAULT_TEMPLATE } from './TemplateEngine';
 import { htmlToMarkdown } from './htmlToMarkdown';
+import { localizeImages } from './ImageDownloader';
+// Phase 3 Plan 07 — retrofit hook for existing + new notes (D-06/D-07/D-09).
 import { rewriteProblemSection } from './HeadingRegion';
 import { ensureLeetcodeBase } from './BaseFile';
 import type { DetailCacheEntry } from './types';
@@ -96,6 +98,9 @@ export interface NoteWriterSettings {
   getNoteTemplate(): string;
   getProblemDetail(slug: string): DetailCacheEntry | null;
   setProblemDetail(slug: string, detail: DetailCacheEntry): Promise<void>;
+  getDownloadImages(): boolean;
+  getImageFolder(): string;
+  getCustomPlaceholders(): Record<string, string>;
 }
 
 /** Minimal file-like shape the mocked Vault returns; real Obsidian returns TFile. */
@@ -474,7 +479,14 @@ export class NoteWriter {
     // Create the file with body; frontmatter comes on a separate pass via processFrontMatter.
     const defaultLang = this.settings.getDefaultLanguage();
     const starterCode = pickStarterCode(newEntry, defaultLang);
-    const problemMarkdown = htmlToMarkdown(newEntry.contentHtml);
+
+    // Ticket #02 — download images before conversion so local paths flow into Markdown.
+    let contentHtml = newEntry.contentHtml;
+    if (this.settings.getDownloadImages()) {
+      const folder = this.settings.getImageFolder();
+      contentHtml = await localizeImages(contentHtml, this.app, folder);
+    }
+    const problemMarkdown = htmlToMarkdown(contentHtml);
     const tagNames = (newEntry.topicTags ?? []).map((t) => t.name).join(', ');
     const templateData = buildTemplateData({
       slug: slug,
@@ -489,7 +501,8 @@ export class NoteWriter {
       tagsLabel: tagNames || newEntry.difficulty.toLowerCase(),
     });
     const template = this.settings.getNoteTemplate() || DEFAULT_TEMPLATE;
-    const body = renderTemplate(template, templateData);
+    const customPlaceholders = this.settings.getCustomPlaceholders();
+    const body = renderTemplate(template, templateData, customPlaceholders);
     const createdRaw = await this.app.vault.create(filePath, body);
     const file = narrowToTFile(createdRaw);
 

@@ -18,6 +18,7 @@
 // entirely if they don't fit the cn-only notebook model.
 
 import { Notice, Plugin } from 'obsidian';
+import type { MarkdownView } from 'obsidian';
 import { SettingsStore } from './settings/SettingsStore';
 import { installRequestUrlFetcher } from './api/requestUrlFetcher';
 import { LeetCodeClient } from './api/LeetCodeClient';
@@ -25,6 +26,7 @@ import { AuthService } from './auth/AuthService';
 import { ProblemListService } from './browse/ProblemListService';
 import { NoteWriter } from './notes/NoteWriter';
 import { LeetCodeSettingTab } from './settings/SettingsTab';
+import { pasteSanitize } from './notes/PasteSanitizer';
 import { logger } from './shared/logger';
 
 export default class LeetCodePlugin extends Plugin {
@@ -74,6 +76,40 @@ export default class LeetCodePlugin extends Plugin {
       callback: () => { void this.auth.login(); },
     });
 
+    // Ticket #04 — paste-sanitize command.
+    this.addCommand({
+      id: 'paste-sanitize',
+      name: 'Paste sanitize: clean and convert HTML to Markdown',
+      editorCallback: (editor, view) => {
+        const sel = editor.getSelection();
+        if (sel) {
+          try {
+            const md = pasteSanitize(sel);
+            editor.replaceSelection(md);
+            new Notice('Paste sanitized.', 2000);
+          } catch (err) {
+            logger.debug('paste-sanitize: failed', err);
+            new Notice('Could not sanitize the selected content.', 4000);
+          }
+        } else {
+          // No selection: act on full content.
+          const full = editor.getValue();
+          if (full) {
+            try {
+              const md = pasteSanitize(full);
+              editor.setValue(md);
+              new Notice('Full document sanitized.', 2000);
+            } catch (err) {
+              logger.debug('paste-sanitize: failed on full doc', err);
+              new Notice('Could not sanitize the document.', 4000);
+            }
+          } else {
+            new Notice('Nothing to sanitize.', 2000);
+          }
+        }
+      },
+    });
+
     this.addCommand({
       id: 'logout',
       name: 'Log out of LeetCode CN',
@@ -90,20 +126,4 @@ export default class LeetCodePlugin extends Plugin {
     logger.info('[leetcode-cn] plugin unloaded');
   }
 
-  // === Stubs for SettingsTab compatibility ===
-  // SettingsTab.ts references these for settings UI. In the cn fork
-  // (workflow A), widget and AI features are not yet implemented; these
-  // stubs keep SettingsTab compiling. They will be replaced with real
-  // implementations when the corresponding features are added.
-
-  /** Widget registry — not implemented in cn fork yet. */
-  widgetRegistry?: {
-    applyIndentReconfigure(val: number | string | null): void;
-    applyDelay(val: number): void;
-  };
-
-  /** Test the active AI connection — not implemented in cn fork yet. */
-  async testActiveAIConnection(): Promise<void> {
-    new Notice('AI features not yet implemented in cn fork.', 3000);
-  }
 }

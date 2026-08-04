@@ -10,6 +10,7 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type LeetCodePlugin from '../main';
 import type { AuthCookies } from '../auth/types';
+import { BUILTIN_NAMES } from '../notes/TemplateEngine';
 import type { AIProvider, BedrockProviderConfig } from './SettingsStore';
 // Phase 07 Plan 04 — single source of truth for provider display names; the
 // local copy of `prettyName` was moved to src/ai/types.ts so main.ts (Notice
@@ -234,107 +235,114 @@ export class LeetCodeSettingTab extends PluginSettingTab {
       );
 
     // =============================
-    //   Code editor section (Phase 16 INDENT-04 D-06)
+    //   Images section (Ticket #02)
     // =============================
-    // User-visible override for the code-editor indent unit. 'auto' defers to
-    // the per-language default (4 for Java/Python/C/C++/Rust, 2 for JS/TS,
-    // tab for Go); a numeric literal forces that many spaces for every
-    // language EXCEPT Go (gofmt non-negotiable; exception lives in the
-    // consumer at childEditorLanguage.ts:effectiveIndent).
-    //
-    // Four-option dropdown using addOption(value, label) chain (NOT
-    // addOptions Record literal) per the locked precedent for explicit-order
-    // dropdowns in this file (Preview section). Dropdown values are strings
-    // in Obsidian's API; coerce back to 'auto' | 2 | 4 | 8 in onChange.
-    new Setting(containerEl).setName('Code editor').setHeading();
+    new Setting(containerEl).setName('Images').setHeading();
 
-    const codeEditorGroup = containerEl.createDiv('lc-settings-group');
-    new Setting(codeEditorGroup)
-      .setName('Indent size')
-      .setDesc('Number of spaces per indent level in the code editor. "Auto" uses the language default (4 for Java/Python/C++, 2 for JS/TS, tab for Go).')
-      .addDropdown((d) => d
-        .addOption('auto', 'Auto (language default)')
-        .addOption('2', '2 spaces')
-        .addOption('4', '4 spaces')
-        .addOption('8', '8 spaces')
-        .setValue(String(this.plugin.lcSettings.getIndentSizeOverride()))
-        .onChange(async (v) => {
-          const val: 'auto' | 2 | 4 | 8 =
-            v === '2' ? 2 :
-            v === '4' ? 4 :
-            v === '8' ? 8 :
-            'auto';
-          await this.plugin.lcSettings.setIndentSizeOverride(val);
-          // Live-apply: fan out to every mounted widget so the new
-          // indent unit takes effect without needing to reopen notes.
-          // Mirrors the `applyDelay` pattern used by 'Save delay' below.
-          this.plugin.widgetRegistry?.applyIndentReconfigure(val);
-        }),
-      );
-
-    new Setting(codeEditorGroup)
-      .setName('Show relative line numbers in code editor')
-      .setDesc('When enabled, the code editor gutter shows distance from cursor line. Toggle takes effect on next note open.')
+    const imageGroup = containerEl.createDiv('lc-settings-group');
+    new Setting(imageGroup)
+      .setName('Download images to vault')
+      .setDesc('When ON, images from leetcode.cn are downloaded to your vault so notes are readable offline.')
       .addToggle((toggle) => toggle
-        .setValue(this.plugin.lcSettings.getShowRelativeLineNumbers())
+        .setValue(this.plugin.lcSettings.getDownloadImages())
         .onChange(async (v) => {
-          await this.plugin.lcSettings.setShowRelativeLineNumbers(v);
+          await this.plugin.lcSettings.setDownloadImages(v);
+          this.renderTab();
         }),
       );
 
-    // Phase 22 (D-settings-01) — `useInlineWidget` / `useNestedEditor`
-    // toggles retired with the v1.2 path. The v1.3 inline widget is the only
-    // mount path and migration runs unconditionally on file open.
+    if (this.plugin.lcSettings.getDownloadImages()) {
+      new Setting(imageGroup)
+        .setName('Image folder')
+        .setDesc('Vault folder where downloaded images are stored.')
+        .addText((t) => t
+          .setPlaceholder('附件/leetcode')
+          .setValue(this.plugin.lcSettings.getImageFolder())
+          .onChange(async (v) => {
+            await this.plugin.lcSettings.setImageFolder(v);
+          }),
+        );
+    }
 
     // =============================
-    //   Migration section
+    //   Custom placeholders section (Ticket #03)
     // =============================
-    new Setting(containerEl).setName('Migration').setHeading();
+    new Setting(containerEl).setName('Custom placeholders').setHeading()
+      .setDesc('Define your own {{placeholders}} that can reference built-in ones (e.g. {{my_id}} = "lc-{{id}}").');
 
-    const expGroup = containerEl.createDiv('lc-settings-group');
+    const placeholderGroup = containerEl.createDiv('lc-settings-group');
 
-    // Phase 21 MIGRATE-06 — auto-migrate v1.2 notes when opened. Default ON
-    // (D-auto-01). When OFF, the widget mount path renders a legacy banner
-    // with a [Migrate now] CTA (D-auto-02). Live-applies: no reload required
-    // because the next file-open consults the setting fresh from
-    // SettingsStore. The onChange handler ONLY persists; never triggers
-    // workspace.detachLeavesOfType or any reload path.
-    new Setting(expGroup)
+    const customPlaceholders = this.plugin.lcSettings.getCustomPlaceholders();
+    const entries = Object.entries(customPlaceholders);
 
-      .setName('Auto-migrate v1.2 notes when opened')
-      .setDesc('When opening a LeetCode note from v1.2 or earlier, silently rewrite the fence to the v1.3 format. When off, a banner offers a manual [Migrate now] button.')
-      .addToggle((toggle) => toggle
-        .setValue(this.plugin.lcSettings.getAutoMigrateOnOpen())
-        .onChange(async (v) => {
-          await this.plugin.lcSettings.setAutoMigrateOnOpen(v);
-          // No reload needed — live-applies on next file open.
+    entries.forEach(([name, value]) => {
+      new Setting(placeholderGroup)
+        .setName(`{{${name}}}`)
+        .addText((t) => t
+          .setPlaceholder('Value (e.g. lc-{{id}})')
+          .setValue(value)
+          .onChange(async (v) => {
+            await this.plugin.lcSettings.setCustomPlaceholder(name, v);
+          }),
+        )
+        .addExtraButton((b) => b
+          .setIcon('trash')
+          .setTooltip('Remove placeholder')
+          .onClick(async () => {
+            await this.plugin.lcSettings.removeCustomPlaceholder(name);
+            this.renderTab();
+          }),
+        );
+    });
+
+    // New-placeholder row: name + value inputs + save button.
+    // Instance props survive renderTab() re-renders during typing.
+    if (!(this as Record<string, unknown>)._placeholderAddName) {
+      (this as Record<string, unknown>)._placeholderAddName = '';
+    }
+    if (!(this as Record<string, unknown>)._placeholderAddValue) {
+      (this as Record<string, unknown>)._placeholderAddValue = '';
+    }
+    const self = this as Record<string, unknown>;
+
+    new Setting(placeholderGroup)
+      .setName('New placeholder')
+      .addText((t) => t
+        .setPlaceholder('name (snake_case)')
+        .setValue(String(self._placeholderAddName || ''))
+        .onChange((v) => { self._placeholderAddName = v; }),
+      )
+      .addText((t) => t
+        .setPlaceholder('value template')
+        .setValue(String(self._placeholderAddValue || ''))
+        .onChange((v) => { self._placeholderAddValue = v; }),
+      )
+      .addExtraButton((b) => b
+        .setIcon('plus')
+        .setTooltip('Add placeholder')
+        .onClick(async () => {
+          const trimmed = String(self._placeholderAddName || '').trim();
+          if (!trimmed) return;
+          if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) {
+            new Notice('Placeholder name must be snake_case (a-z, 0-9, _), starting with a letter.', 5000);
+            return;
+          }
+          if (customPlaceholders[trimmed] !== undefined) {
+            new Notice('Placeholder {{' + trimmed + '}} already exists.', 4000);
+            return;
+          }
+          if (BUILTIN_NAMES.has(trimmed)) {
+            new Notice('{{' + trimmed + '}} is a built-in placeholder and cannot be overridden.', 4000);
+            return;
+          }
+          await this.plugin.lcSettings.setCustomPlaceholder(trimmed, String(self._placeholderAddValue || '').trim());
+          self._placeholderAddName = '';
+          self._placeholderAddValue = '';
+          this.renderTab();
         }),
       );
 
-    new Setting(expGroup)
-      .setName('Save delay')
-      .setDesc('Time after typing stops before saving to disk. Lower = snappier; higher = fewer file-watcher events.')
-      .addDropdown((d) => d
-        .addOption('300', '300ms')
-        .addOption('400', '400ms (default)')
-        .addOption('500', '500ms')
-        .addOption('1000', '1s')
-        .addOption('2000', '2s')
-        .setValue(String(this.plugin.lcSettings.getWidgetSyncDebounceMs()))
-        .onChange(async (v) => {
-          const val: 300 | 400 | 500 | 1000 | 2000 =
-            v === '300' ? 300 :
-            v === '500' ? 500 :
-            v === '1000' ? 1000 :
-            v === '2000' ? 2000 :
-            400;
-          await this.plugin.lcSettings.setWidgetSyncDebounceMs(val);
-          // Phase 19 Plan 02 — live-apply across all live widgets without
-          // note reload (D-08). No-op when no widgets registered.
-          this.plugin.widgetRegistry?.applyDelay(val);
-        }),
-      );
-
+    // Ticket #05 — code editor, migration, and widget sync sections removed.
 
     // =============================
     //   AI section (Phase 07 Plan 03 — AIPROV-01 / AIPROV-02)
@@ -357,21 +365,6 @@ export class LeetCodeSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName('AI coach').setHeading()
       .setDesc('AI-powered debug, review, and pattern classification.')
-      .addButton((b) => {
-        b.setIcon('refresh-cw')
-          .setTooltip('Test connection')
-          .onClick(async () => {
-            b.setIcon('loader');
-            b.setDisabled(true);
-            try {
-              await this.plugin.testActiveAIConnection();
-            } finally {
-              b.setIcon('refresh-cw');
-              b.setDisabled(false);
-            }
-          });
-        b.buttonEl.addClass('clickable-icon');
-      })
       .addToggle((toggle) => toggle
         .setValue(aiEnabled)
         .onChange(async (value) => {

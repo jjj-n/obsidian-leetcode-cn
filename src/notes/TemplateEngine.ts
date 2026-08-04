@@ -20,6 +20,13 @@ export interface TemplateData {
   solution_approach: string;
 }
 
+/** Set of built-in placeholder names — used by SettingsTab for duplicate detection. */
+export const BUILTIN_NAMES: ReadonlySet<string> = new Set([
+  'slug', 'title', 'title_cn', 'problem', 'code', 'solution',
+  'solution_approach', 'difficulty', 'tags', 'id', 'url',
+  'solved_date', 'language',
+]);
+
 /** Built-in placeholder → key mapping. Each placeholder maps to a TemplateData field. */
 const BUILTIN_PLACEHOLDERS: Record<string, keyof TemplateData> = {
   slug: 'slug',
@@ -89,14 +96,38 @@ solved_date: {{solved_date}}
 `;
 
 /** Render a template string by replacing {{placeholder}} tokens with values
- *  from the data model. Unknown placeholders are left as-is (no substitution). */
-export function renderTemplate(template: string, data: TemplateData): string {
+ *  from the data model plus any user-defined custom placeholders.
+ *  Unknown placeholders are left as-is (no substitution). */
+export function renderTemplate(
+  template: string,
+  data: TemplateData,
+  customPlaceholders?: Record<string, string>,
+): string {
+  // Pre-resolve custom placeholder values by replacing built-in refs inside them.
+  // Custom placeholders CAN reference built-in but NOT other custom (no recursion).
+  const resolvedCustom = new Map<string, string>();
+  if (customPlaceholders) {
+    for (const [name, valueTemplate] of Object.entries(customPlaceholders)) {
+      const resolved = valueTemplate.replace(/\{\{(\w+)\}\}/g, (_m, ref: string) => {
+        // Only allow built-in references — cross-custom refs stay as-is.
+        const key = BUILTIN_PLACEHOLDERS[ref];
+        return key ? String(data[key] ?? '') : _m;
+      });
+      resolvedCustom.set(name, resolved);
+    }
+  }
+
   return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+    // Built-in takes precedence; custom only fires for non-built-in names
+    // so they coexist without conflict (spec: "共存、不冲突").
     const key = BUILTIN_PLACEHOLDERS[name];
     if (key) {
       return String(data[key] ?? '');
     }
-    // Unknown placeholder — leave as-is (user-defined or future placeholder).
+    if (resolvedCustom.has(name)) {
+      return resolvedCustom.get(name)!;
+    }
+    // Unknown placeholder — leave as-is.
     return match;
   });
 }

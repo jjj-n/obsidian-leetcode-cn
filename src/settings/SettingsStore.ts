@@ -199,6 +199,15 @@ export interface PluginData {
    *  default. Stored as-is; renderTemplate replaces {{placeholders}} at note
    *  creation time. */
   noteTemplate: string;
+  /** Ticket #02 — download cn CDN images to vault. Default OFF. When ON,
+   *  images from leetcode.cn CDN are downloaded to imageFolder and links
+   *  rewritten to local vault paths. */
+  downloadImages: boolean;
+  /** Ticket #02 — vault folder for downloaded LC images. Default `附件/leetcode`. */
+  imageFolder: string;
+  /** Ticket #03 — user-defined custom placeholders. Key = placeholder name
+   *  (snake_case), value = template string (may reference built-in placeholders). */
+  customPlaceholders: Record<string, string>;
 }
 
 /** Compound filter matching LC's "Match All/Any of the following" UI. Each
@@ -328,6 +337,9 @@ const DEFAULT_DATA: PluginData = {
   autoAIKnowledgeGraph: true,  // AIKG-01 default ON — core feature
   featureFlags: { lookAheadEdges: false },  // AIKG-06 default OFF — experimental
   noteTemplate: '',  // '' = use built-in DEFAULT_TEMPLATE
+  downloadImages: false,
+  imageFolder: '附件/leetcode',
+  customPlaceholders: {},
 };
 
 const VALID_DIFFICULTIES = new Set(['Easy', 'Medium', 'Hard']);
@@ -840,6 +852,20 @@ export class SettingsStore {
       noteTemplate: typeof raw.noteTemplate === 'string' && raw.noteTemplate.length > 0
         ? raw.noteTemplate
         : DEFAULT_DATA.noteTemplate,
+      downloadImages: typeof raw.downloadImages === 'boolean'
+        ? raw.downloadImages
+        : DEFAULT_DATA.downloadImages,
+      imageFolder: typeof raw.imageFolder === 'string' && raw.imageFolder.trim().length > 0
+        ? raw.imageFolder.trim().replace(/[\\/]+$/, '')
+        : DEFAULT_DATA.imageFolder,
+      customPlaceholders: (typeof raw.customPlaceholders === 'object'
+        && raw.customPlaceholders !== null
+        && !Array.isArray(raw.customPlaceholders)
+        && Object.entries(raw.customPlaceholders as Record<string, unknown>).every(
+          ([k, v]) => typeof k === 'string' && k.length > 0 && typeof v === 'string'
+        ))
+        ? raw.customPlaceholders as Record<string, string>
+        : DEFAULT_DATA.customPlaceholders,
     };
     // Warn without leaking values so a user whose disk file is corrupt knows
     // why they unexpectedly see a logged-out state or a fresh index refetch.
@@ -1086,6 +1112,38 @@ export class SettingsStore {
 
   /** Ticket #5 — read the user's note template. Empty = use built-in default. */
   getNoteTemplate(): string { return this.data.noteTemplate; }
+
+  // === Ticket #02 — image localization ===
+
+  getDownloadImages(): boolean { return this.data.downloadImages; }
+
+  async setDownloadImages(v: boolean): Promise<void> {
+    this.data.downloadImages = v;
+    await this.persist();
+  }
+
+  getImageFolder(): string { return this.data.imageFolder; }
+
+  async setImageFolder(v: string): Promise<void> {
+    this.data.imageFolder = v.trim().replace(/[\\/]+$/, '');
+    await this.persist();
+  }
+
+  // === Ticket #03 — custom placeholders ===
+
+  getCustomPlaceholders(): Record<string, string> { return { ...this.data.customPlaceholders }; }
+
+  async setCustomPlaceholder(name: string, value: string): Promise<void> {
+    this.data.customPlaceholders = { ...this.data.customPlaceholders, [name]: value };
+    await this.persist();
+  }
+
+  async removeCustomPlaceholder(name: string): Promise<void> {
+    const next = { ...this.data.customPlaceholders };
+    delete next[name];
+    this.data.customPlaceholders = next;
+    await this.persist();
+  }
 
   /** Ticket #5 — persist the user's note template. */
   async setNoteTemplate(v: string): Promise<void> {

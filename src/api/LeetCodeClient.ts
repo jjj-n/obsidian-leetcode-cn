@@ -50,8 +50,14 @@ export class LeetCodeClient {
 
   constructor(settings: SettingsStore) {
     this.settings = settings;
-    this.lc = new LeetCodeAdvanced();
-    this.lcCN = new LeetCodeCN();
+    // Ticket #05 — lazy-init: only construct the active region's client.
+    // The other stays as the default (no-cred) instance as a safe fallback.
+    const region = settings.getRegion();
+    if (region === 'cn') {
+      this.lcCN = new LeetCodeCN();
+    } else {
+      this.lc = new LeetCodeAdvanced();
+    }
   }
 
   /** Rebuild the LeetCode client with current cookies and await Credential bootstrap.
@@ -61,8 +67,11 @@ export class LeetCodeClient {
     const cookies = this.settings.getAuthCookies();
     const region = this.settings.getRegion();
     if (!cookies) {
-      this.lc = new LeetCodeAdvanced();
-      this.lcCN = new LeetCodeCN();
+      if (region === 'cn') {
+        this.lcCN = new LeetCodeCN();
+      } else {
+        this.lc = new LeetCodeAdvanced();
+      }
       return;
     }
     if (region === 'cn') {
