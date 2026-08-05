@@ -49,6 +49,12 @@ export function rewriteAnchorByParams(
 /**
  * Rewrite all anchors of a given type for a specific slug.
  * Returns the updated body.
+ *
+ * TODO: 当前设计有问题 - 会把所有匹配锚点更新为相同内容。
+ * 对于多解法场景（同一题多个 solution 锚点，不同 source/url/index），
+ * 应该分别获取每个锚点对应的内容，而不是批量替换。
+ * Ticket 10 实现"刷新单题全部"时需要重新设计此函数，
+ * 改为接受 Map<params, content> 或类似结构，逐个精确更新。
  */
 export function rewriteAnchorsForSlug(
   body: string,
@@ -77,6 +83,11 @@ export function rewriteAnchorsForSlug(
 /**
  * Rewrite all anchors in a note (for full refresh).
  * Returns the updated body.
+ *
+ * TODO: 当前设计有问题 - 会把所有匹配锚点更新为相同内容。
+ * 对于多解法/多题场景，应该分别获取每个锚点对应的内容。
+ * Ticket 10 实现"刷新整篇笔记"时需要重新设计此函数，
+ * 改为根据每个锚点的完整参数（slug + source + url/index）分别获取内容。
  */
 export function rewriteAllAnchors(
   body: string,
