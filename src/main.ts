@@ -17,8 +17,8 @@
 // These will be re-added as part of cn implementation tickets, or skipped
 // entirely if they don't fit the cn-only notebook model.
 
-import { Notice, Plugin } from 'obsidian';
-import type { MarkdownView } from 'obsidian';
+import { Notice, Plugin, Modal, Setting } from 'obsidian';
+import type { MarkdownView, App } from 'obsidian';
 import { SettingsStore } from './settings/SettingsStore';
 import { installRequestUrlFetcher } from './api/requestUrlFetcher';
 import { LeetCodeClient } from './api/LeetCodeClient';
@@ -27,6 +27,7 @@ import { ProblemListService } from './browse/ProblemListService';
 import { NoteWriter } from './notes/NoteWriter';
 import { LeetCodeSettingTab } from './settings/SettingsTab';
 import { pasteSanitize } from './notes/PasteSanitizer';
+import { parseSolutionMarkers, findEmptySolutionAnchors, findNearestEmptySolutionAnchor, removeMarkers, updateAnchorUrl } from './notes/SolutionMarker';
 import { logger } from './shared/logger';
 
 export default class LeetCodePlugin extends Plugin {
@@ -119,6 +120,113 @@ export default class LeetCodePlugin extends Plugin {
       },
     });
 
+    // Ticket #09 — solution picker UX: marker absorption + modal input.
+    this.addCommand({
+      id: 'absorb-solution-markers',
+      name: 'Absorb solution markers',
+      editorCallback: async (editor, view) => {
+        const file = view.file;
+        if (!file) {
+          new Notice('No active file.', 3000);
+          return;
+        }
+
+        const content = editor.getValue();
+        const markers = parseSolutionMarkers(content);
+
+        if (markers.length === 0) {
+          new Notice('No solution markers found. Add lines like "题解链接: <URL>".', 4000);
+          return;
+        }
+
+        const emptyAnchors = findEmptySolutionAnchors(content);
+        if (emptyAnchors.length === 0) {
+          new Notice('No empty solution anchors found. Add an empty <!-- lc:solution --> anchor first.', 4000);
+          return;
+        }
+
+        let processed = 0;
+        let updatedContent = content;
+
+        // Process each marker
+        for (const marker of markers) {
+          // Find nearest empty anchor to this marker
+          const anchor = findNearestEmptySolutionAnchor(updatedContent, marker.lineNumber);
+          if (!anchor) {
+            continue;
+          }
+
+          // Update anchor with URL
+          updatedContent = updateAnchorUrl(updatedContent, anchor, marker.url);
+
+          // Trigger solution refresh
+          try {
+            await this.notes.refreshSolution(file, anchor.params.slug || '', marker.url);
+            processed++;
+          } catch (err) {
+            logger.debug('absorb-solution-markers: refresh failed', err);
+            // Continue processing other markers even if one fails
+          }
+        }
+
+        // Remove processed marker lines
+        updatedContent = removeMarkers(updatedContent, markers);
+
+        // Update file
+        await editor.setValue(updatedContent);
+
+        if (processed > 0) {
+          new Notice(`Absorbed ${processed} solution marker(s).`, 3000);
+        } else {
+          new Notice('No solutions could be processed.', 4000);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'input-solution-url',
+      name: 'Input solution URL',
+      editorCallback: (editor, view) => {
+        const file = view.file;
+        if (!file) {
+          new Notice('No active file.', 3000);
+          return;
+        }
+
+        const content = editor.getValue();
+        const emptyAnchors = findEmptySolutionAnchors(content);
+
+        if (emptyAnchors.length === 0) {
+          new Notice('No empty solution anchors found. Add an empty <!-- lc:solution --> anchor first.', 4000);
+          return;
+        }
+
+        // Open modal for URL input
+        new SolutionUrlModal(this.app, async (url) => {
+          if (!url) return;
+
+          // Find first empty anchor
+          const anchor = emptyAnchors[0];
+          if (!anchor) return;
+
+          // Update anchor with URL
+          let updatedContent = updateAnchorUrl(content, anchor, url);
+
+          // Update file
+          await editor.setValue(updatedContent);
+
+          // Trigger solution refresh
+          try {
+            await this.notes.refreshSolution(file, anchor.params.slug || '', url);
+            new Notice('Solution added successfully.', 3000);
+          } catch (err) {
+            logger.debug('input-solution-url: refresh failed', err);
+            new Notice('Failed to fetch solution. Check the URL and try again.', 4000);
+          }
+        }).open();
+      },
+    });
+
     logger.info('[leetcode-cn] plugin loaded');
   }
 
@@ -126,4 +234,59 @@ export default class LeetCodePlugin extends Plugin {
     logger.info('[leetcode-cn] plugin unloaded');
   }
 
+}
+
+/**
+ * Modal for inputting a solution URL.
+ * Ticket #09:辅助路径 for solution picker UX.
+ */
+class SolutionUrlModal extends Modal {
+  private url: string = '';
+  private onSubmit: (url: string) => void;
+
+  constructor(app: App, onSubmit: (url: string) => void) {
+    super(app);
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: 'Input Solution URL' });
+    contentEl.createEl('p', {
+      text: 'Paste a leetcode.cn solution URL:',
+      cls: 'solution-url-modal-description',
+    });
+
+    new Setting(contentEl)
+      .setName('URL')
+      .addText((text) =>
+        text
+          .setPlaceholder('https://leetcode.cn/problems/.../solutions/.../')
+          .setValue(this.url)
+          .onChange((value) => {
+            this.url = value;
+          }),
+      );
+
+    new Setting(contentEl)
+      .addButton((btn) =>
+        btn
+          .setButtonText('Submit')
+          .setCta()
+          .onClick(() => {
+            this.close();
+            this.onSubmit(this.url);
+          }),
+      )
+      .addButton((btn) =>
+        btn.setButtonText('Cancel').onClick(() => {
+          this.close();
+        }),
+      );
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
 }
