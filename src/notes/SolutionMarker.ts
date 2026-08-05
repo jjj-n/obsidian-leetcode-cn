@@ -1,7 +1,7 @@
 // src/notes/SolutionMarker.ts
 // Ticket 09: Solution marker parsing and empty anchor detection
 
-import { parseAnchors, type AnchorRegion } from './AnchorParser';
+import { parseAnchors, buildAnchorOpen, type AnchorRegion } from './AnchorParser';
 
 /**
  * Represents a solution marker line in a note
@@ -10,7 +10,6 @@ export interface SolutionMarker {
   line: string;
   lineNumber: number;
   url: string;
-  fullMatch: string;
 }
 
 /**
@@ -39,7 +38,6 @@ export function parseSolutionMarkers(content: string): SolutionMarker[] {
         line: line,
         lineNumber: i,
         url: match[2],
-        fullMatch: match[0],
       });
     }
   }
@@ -80,13 +78,15 @@ export function findEmptySolutionAnchors(content: string): AnchorRegion[] {
  *
  * @param content - The note content
  * @param lineNumber - The line number to search from
+ * @param precomputedEmptyAnchors - Optional pre-computed empty anchors to avoid recomputation
  * @returns The nearest empty solution anchor, or null if none found
  */
 export function findNearestEmptySolutionAnchor(
   content: string,
-  lineNumber: number
+  lineNumber: number,
+  precomputedEmptyAnchors?: AnchorRegion[]
 ): AnchorRegion | null {
-  const emptyAnchors = findEmptySolutionAnchors(content);
+  const emptyAnchors = precomputedEmptyAnchors ?? findEmptySolutionAnchors(content);
 
   if (emptyAnchors.length === 0) {
     return null;
@@ -133,7 +133,7 @@ export function removeMarkers(content: string, markers: SolutionMarker[]): strin
 
   const lines = content.split('\n');
 
-  // Create a set of line numbers to remove (in reverse order to avoid index shifting)
+  // Create a set of line numbers to remove
   const lineNumbersToRemove = new Set(markers.map(m => m.lineNumber));
 
   // Filter out marker lines
@@ -156,20 +156,10 @@ export function updateAnchorUrl(
   anchor: AnchorRegion,
   url: string
 ): string {
-  // Build new opening tag with URL
+  // Build new opening tag with URL using buildAnchorOpen
   const params = { ...anchor.params, url, source: 'url' };
-  const paramParts: string[] = [];
-
-  if (params.slug) paramParts.push(`slug="${params.slug}"`);
-  if (params.source) paramParts.push(`source="${params.source}"`);
-  if (params.url) paramParts.push(`url="${params.url}"`);
-  if (params.index) paramParts.push(`index="${params.index}"`);
-
-  const paramString = paramParts.length > 0 ? ' ' + paramParts.join(' ') : '';
-  const newOpeningTag = `<!-- lc:${anchor.type}${paramString} -->`;
+  const newOpeningTag = buildAnchorOpen(anchor.type, params);
 
   // Replace the old opening tag with the new one
-  const oldOpeningTag = content.slice(anchor.startOffset, anchor.contentStart);
-  const result = content.slice(0, anchor.startOffset) + newOpeningTag + content.slice(anchor.contentStart);
-  return result;
+  return content.slice(0, anchor.startOffset) + newOpeningTag + content.slice(anchor.contentStart);
 }

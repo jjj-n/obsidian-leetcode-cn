@@ -1,0 +1,60 @@
+// src/ui/SolutionUrlModal.ts
+// Ticket #09: Modal for inputting a solution URL
+
+import { Modal, Setting } from 'obsidian';
+import type { App } from 'obsidian';
+
+/**
+ * Modal for inputting a solution URL.
+ * Ticket #09: 辅助路径 for solution picker UX.
+ */
+export class SolutionUrlModal extends Modal {
+  private url: string = '';
+  private onSubmit: (url: string) => void;
+
+  constructor(app: App, onSubmit: (url: string) => void) {
+    super(app);
+    this.onSubmit = onSubmit;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: '输入题解 URL' });
+    contentEl.createEl('p', {
+      text: '粘贴 leetcode.cn 题解 URL：',
+      cls: 'solution-url-modal-description',
+    });
+
+    new Setting(contentEl)
+      .setName('URL')
+      .addText((text) =>
+        text
+          .setPlaceholder('https://leetcode.cn/problems/.../solutions/.../')
+          .setValue(this.url)
+          .onChange((value) => {
+            this.url = value;
+          }),
+      );
+
+    new Setting(contentEl)
+      .addButton((btn) =>
+        btn
+          .setButtonText('提交')
+          .setCta()
+          .onClick(() => {
+            this.close();
+            this.onSubmit(this.url);
+          }),
+      )
+      .addButton((btn) =>
+        btn.setButtonText('取消').onClick(() => {
+          this.close();
+        }),
+      );
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+}

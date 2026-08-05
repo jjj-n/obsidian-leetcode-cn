@@ -17,8 +17,8 @@
 // These will be re-added as part of cn implementation tickets, or skipped
 // entirely if they don't fit the cn-only notebook model.
 
-import { Notice, Plugin, Modal, Setting } from 'obsidian';
-import type { MarkdownView, App } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
+import type { MarkdownView } from 'obsidian';
 import { SettingsStore } from './settings/SettingsStore';
 import { installRequestUrlFetcher } from './api/requestUrlFetcher';
 import { LeetCodeClient } from './api/LeetCodeClient';
@@ -28,6 +28,7 @@ import { NoteWriter } from './notes/NoteWriter';
 import { LeetCodeSettingTab } from './settings/SettingsTab';
 import { pasteSanitize } from './notes/PasteSanitizer';
 import { parseSolutionMarkers, findEmptySolutionAnchors, findNearestEmptySolutionAnchor, removeMarkers, updateAnchorUrl } from './notes/SolutionMarker';
+import { SolutionUrlModal } from './ui/SolutionUrlModal';
 import { logger } from './shared/logger';
 
 export default class LeetCodePlugin extends Plugin {
@@ -121,16 +122,36 @@ export default class LeetCodePlugin extends Plugin {
     });
 
     // Ticket #09 — solution picker UX: marker absorption + modal input.
+
+    // Helper to validate file and find empty anchors
+    const validateAndGetEmptyAnchors = (
+      editor: { getValue(): string },
+      view: { file: any }
+    ): { file: any; emptyAnchors: any[] } | null => {
+      const file = view.file;
+      if (!file) {
+        new Notice('没有活动文件。', 3000);
+        return null;
+      }
+
+      const content = editor.getValue();
+      const emptyAnchors = findEmptySolutionAnchors(content);
+      if (emptyAnchors.length === 0) {
+        new Notice('未找到空题解锚点。请先添加一个空的 <!-- lc:solution --> 锚点。', 4000);
+        return null;
+      }
+
+      return { file, emptyAnchors };
+    };
+
     this.addCommand({
       id: 'absorb-solution-markers',
       name: '吸收题解标记',
       editorCallback: async (editor, view) => {
-        const file = view.file;
-        if (!file) {
-          new Notice('没有活动文件。', 3000);
-          return;
-        }
+        const validation = validateAndGetEmptyAnchors(editor, view);
+        if (!validation) return;
 
+        const { file } = validation;
         const content = editor.getValue();
         const markers = parseSolutionMarkers(content);
 
@@ -139,19 +160,13 @@ export default class LeetCodePlugin extends Plugin {
           return;
         }
 
-        const emptyAnchors = findEmptySolutionAnchors(content);
-        if (emptyAnchors.length === 0) {
-          new Notice('未找到空题解锚点。请先添加一个空的 <!-- lc:solution --> 锚点。', 4000);
-          return;
-        }
-
         let processed = 0;
         let updatedContent = content;
 
-        // Process each marker
+        // Process each marker, using precomputed empty anchors for efficiency
         for (const marker of markers) {
           // Find nearest empty anchor to this marker
-          const anchor = findNearestEmptySolutionAnchor(updatedContent, marker.lineNumber);
+          const anchor = findNearestEmptySolutionAnchor(updatedContent, marker.lineNumber, validation.emptyAnchors);
           if (!anchor) {
             continue;
           }
@@ -172,8 +187,8 @@ export default class LeetCodePlugin extends Plugin {
         // Remove processed marker lines
         updatedContent = removeMarkers(updatedContent, markers);
 
-        // Update file
-        await editor.setValue(updatedContent);
+        // Update file using vault.process (the only mutation primitive per CLAUDE.md)
+        await this.app.vault.process(file, () => updatedContent);
 
         if (processed > 0) {
           new Notice(`已吸收 ${processed} 个题解标记。`, 3000);
@@ -187,19 +202,11 @@ export default class LeetCodePlugin extends Plugin {
       id: 'input-solution-url',
       name: '输入题解 URL',
       editorCallback: (editor, view) => {
-        const file = view.file;
-        if (!file) {
-          new Notice('没有活动文件。', 3000);
-          return;
-        }
+        const validation = validateAndGetEmptyAnchors(editor, view);
+        if (!validation) return;
 
+        const { file, emptyAnchors } = validation;
         const content = editor.getValue();
-        const emptyAnchors = findEmptySolutionAnchors(content);
-
-        if (emptyAnchors.length === 0) {
-          new Notice('未找到空题解锚点。请先添加一个空的 <!-- lc:solution --> 锚点。', 4000);
-          return;
-        }
 
         // Open modal for URL input
         new SolutionUrlModal(this.app, async (url) => {
@@ -212,8 +219,8 @@ export default class LeetCodePlugin extends Plugin {
           // Update anchor with URL
           let updatedContent = updateAnchorUrl(content, anchor, url);
 
-          // Update file
-          await editor.setValue(updatedContent);
+          // Update file using vault.process (the only mutation primitive per CLAUDE.md)
+          await this.app.vault.process(file, () => updatedContent);
 
           // Trigger solution refresh
           try {
@@ -234,59 +241,4 @@ export default class LeetCodePlugin extends Plugin {
     logger.info('[leetcode-cn] plugin unloaded');
   }
 
-}
-
-/**
- * Modal for inputting a solution URL.
- * Ticket #09:辅助路径 for solution picker UX.
- */
-class SolutionUrlModal extends Modal {
-  private url: string = '';
-  private onSubmit: (url: string) => void;
-
-  constructor(app: App, onSubmit: (url: string) => void) {
-    super(app);
-    this.onSubmit = onSubmit;
-  }
-
-  onOpen(): void {
-    const { contentEl } = this;
-    contentEl.createEl('h2', { text: '输入题解 URL' });
-    contentEl.createEl('p', {
-      text: '粘贴 leetcode.cn 题解 URL：',
-      cls: 'solution-url-modal-description',
-    });
-
-    new Setting(contentEl)
-      .setName('URL')
-      .addText((text) =>
-        text
-          .setPlaceholder('https://leetcode.cn/problems/.../solutions/.../')
-          .setValue(this.url)
-          .onChange((value) => {
-            this.url = value;
-          }),
-      );
-
-    new Setting(contentEl)
-      .addButton((btn) =>
-        btn
-          .setButtonText('提交')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            this.onSubmit(this.url);
-          }),
-      )
-      .addButton((btn) =>
-        btn.setButtonText('取消').onClick(() => {
-          this.close();
-        }),
-      );
-  }
-
-  onClose(): void {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
 }
