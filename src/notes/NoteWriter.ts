@@ -53,6 +53,7 @@ import { appendAnchorRegion, rewriteAnchorByParams } from './AnchorRewriter';
 import { ensureLeetcodeBase } from './BaseFile';
 // Phase 07 — solution fetching and conversion.
 import { fetchCNOfficialSolution, fetchCNCommunitySolution, parseCNSolutionUrl, type SolutionArticle } from '../api/LeetCodeCNSolutionAdapter';
+import type { LeetCodeCN } from '@leetnotion/leetcode-api';
 import { convertSolution } from './SolutionConverter';
 import type { DetailCacheEntry } from './types';
 
@@ -67,7 +68,7 @@ export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export interface NoteWriterClient {
   getProblemDetail(slug: string): Promise<NoteWriterDetail | null>;
   /** Phase 07: lcCN instance for solution fetching. */
-  lcCN?: InstanceType<typeof import('@leetnotion/leetcode-api').LeetCodeCN>;
+  lcCN?: InstanceType<typeof LeetCodeCN>;
 }
 
 /**
@@ -832,14 +833,14 @@ export class NoteWriter {
     // Fetch solution content
     let solutionArticle: SolutionArticle | null = null;
     if (!this.client.lcCN) {
-      new Notice('LeetCode client not initialized. Please log in via Settings.', 0);
+      new Notice('LeetCode client not initialized. Please log in again via Settings.', 0);
       return;
     }
     try {
       if (source === 'official') {
         solutionArticle = await fetchCNOfficialSolution(this.client.lcCN, slug);
-      } else if (source === 'url' && articleSlug) {
-        solutionArticle = await fetchCNCommunitySolution(this.client.lcCN, articleSlug);
+      } else if (source === 'url') {
+        solutionArticle = await fetchCNCommunitySolution(this.client.lcCN, articleSlug!);
       }
     } catch (err) {
       if (isSessionExpired(err)) {
@@ -884,8 +885,19 @@ export class NoteWriter {
 
       // Rewrite the first solution anchor
       let updated = currentContent;
-      updated = rewriteAnchorByParams(updated, 'solution', params, converted.code) ?? updated;
-      updated = rewriteAnchorByParams(updated, 'solution_approach', params, converted.approach) ?? updated;
+      const solutionResult = rewriteAnchorByParams(updated, 'solution', params, converted.code);
+      if (!solutionResult) {
+        new Notice(`No solution anchor found matching source=${params.source} for ${slug}.`, 4000);
+        return currentContent;
+      }
+      updated = solutionResult;
+
+      const approachResult = rewriteAnchorByParams(updated, 'solution_approach', params, converted.approach);
+      if (!approachResult) {
+        new Notice(`No solution_approach anchor found matching source=${params.source} for ${slug}.`, 4000);
+        return currentContent;
+      }
+      updated = approachResult;
 
       return updated;
     });
