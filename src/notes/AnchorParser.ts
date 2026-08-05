@@ -58,19 +58,39 @@ export function parseAnchors(body: string): AnchorRegion[] {
 }
 
 /**
- * Parse parameter string into AnchorParams object
+ * Valid source values for solution anchors
+ */
+export const VALID_SOURCES = ['url', 'ac', 'official', 'starter'] as const;
+export type ValidSource = typeof VALID_SOURCES[number];
+
+/**
+ * Parse parameter string into AnchorParams object.
+ * Supports both quoted (slug="two-sum") and unquoted (slug=two-sum) values.
+ * Validates source parameter against allowed values.
  */
 function parseParams(paramString: string): AnchorParams {
   const params: AnchorParams = {};
-  const paramPattern = /(\w+)="([^"]*)"/g;
+  // Support both quoted and unquoted values: key="value" or key=value
+  const paramPattern = /(\w+)=(?:"([^"]*)"|([^\s]+))/g;
   let match;
   while ((match = paramPattern.exec(paramString)) !== null) {
     const key = match[1];
-    const value = match[2] || '';
-    if (key === 'slug') params.slug = value;
-    else if (key === 'source') params.source = value;
-    else if (key === 'url') params.url = value;
-    else if (key === 'index') params.index = value;
+    // Use quoted value (group 2) if present, otherwise unquoted (group 3)
+    const value = match[2] !== undefined ? match[2] : match[3] || '';
+
+    if (key === 'slug') {
+      params.slug = value;
+    } else if (key === 'source') {
+      // Validate source against allowed values
+      if (VALID_SOURCES.includes(value as ValidSource)) {
+        params.source = value;
+      }
+      // Invalid source values are silently ignored
+    } else if (key === 'url') {
+      params.url = value;
+    } else if (key === 'index') {
+      params.index = value;
+    }
   }
   return params;
 }
@@ -137,4 +157,30 @@ export function extractSlugs(body: string): string[] {
     }
   }
   return Array.from(slugSet);
+}
+
+/**
+ * Resolve default values for anchor parameters based on context.
+ * For example, if a solution anchor is missing a slug, it defaults to the current problem's slug.
+ *
+ * @param params - The parsed anchor parameters
+ * @param contextSlug - The current problem's slug (used as default for missing slug)
+ * @returns Parameters with defaults applied
+ */
+export function resolveAnchorDefaults(
+  params: AnchorParams,
+  contextSlug?: string
+): AnchorParams {
+  const resolved = { ...params };
+
+  // Default slug to context slug if missing
+  if (!resolved.slug && contextSlug) {
+    resolved.slug = contextSlug;
+  }
+
+  // Default source to 'official' for solution anchors if missing
+  // (This is a reasonable default for official solutions)
+  // Note: We can't determine anchor type here, so caller should handle this
+
+  return resolved;
 }

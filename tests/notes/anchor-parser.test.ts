@@ -9,6 +9,8 @@ import {
   buildAnchorClose,
   replaceAnchorContent,
   extractSlugs,
+  resolveAnchorDefaults,
+  VALID_SOURCES,
 } from '../../src/notes/AnchorParser';
 import {
   rewriteAnchorByParams,
@@ -228,5 +230,145 @@ describe('appendAnchorRegion', () => {
     const updated = appendAnchorRegion(body, 'problem', { slug: 'two-sum' }, 'content', '## Problem');
     expect(updated).toContain('## Problem');
     expect(updated).toContain('<!-- lc:problem slug="two-sum" -->');
+  });
+});
+
+describe('Parameter parsing (normalize & validation)', () => {
+  it('parses unquoted parameter values', () => {
+    const body = '<!-- lc:solution slug=two-sum source=official -->\ncontent\n<!-- /lc:solution -->';
+    const anchors = parseAnchors(body);
+    expect(anchors).toHaveLength(1);
+    const [first] = anchors;
+    expect(first).toBeDefined();
+    expect(first!.params.slug).toBe('two-sum');
+    expect(first!.params.source).toBe('official');
+  });
+
+  it('parses mixed quoted and unquoted values', () => {
+    const body = '<!-- lc:solution slug="two-sum" source=official url=https://example.com -->\ncontent\n<!-- /lc:solution -->';
+    const anchors = parseAnchors(body);
+    expect(anchors).toHaveLength(1);
+    const [first] = anchors;
+    expect(first).toBeDefined();
+    expect(first!.params.slug).toBe('two-sum');
+    expect(first!.params.source).toBe('official');
+    expect(first!.params.url).toBe('https://example.com');
+  });
+
+  it('handles parameters in any order (order-independent)', () => {
+    const body1 = '<!-- lc:solution slug=two-sum source=url url=https://example.com -->\ncontent\n<!-- /lc:solution -->';
+    const body2 = '<!-- lc:solution url=https://example.com source=url slug=two-sum -->\ncontent\n<!-- /lc:solution -->';
+    const body3 = '<!-- lc:solution source=url url=https://example.com slug=two-sum -->\ncontent\n<!-- /lc:solution -->';
+
+    const anchors1 = parseAnchors(body1);
+    const anchors2 = parseAnchors(body2);
+    const anchors3 = parseAnchors(body3);
+
+    expect(anchors1).toHaveLength(1);
+    expect(anchors2).toHaveLength(1);
+    expect(anchors3).toHaveLength(1);
+
+    const [a1, a2, a3] = [anchors1[0]!, anchors2[0]!, anchors3[0]!];
+    expect(a1.params).toEqual(a2.params);
+    expect(a2.params).toEqual(a3.params);
+    expect(a1.params.slug).toBe('two-sum');
+    expect(a1.params.source).toBe('url');
+    expect(a1.params.url).toBe('https://example.com');
+  });
+
+  it('validates source parameter against allowed values', () => {
+    // Valid sources should be parsed
+    const validBody = '<!-- lc:solution source=official -->\ncontent\n<!-- /lc:solution -->';
+    const validAnchors = parseAnchors(validBody);
+    expect(validAnchors[0]!.params.source).toBe('official');
+
+    // Invalid sources should be silently ignored
+    const invalidBody = '<!-- lc:solution source=invalid -->\ncontent\n<!-- /lc:solution -->';
+    const invalidAnchors = parseAnchors(invalidBody);
+    expect(invalidAnchors[0]!.params.source).toBeUndefined();
+  });
+
+  it('accepts all valid source values', () => {
+    for (const source of VALID_SOURCES) {
+      const body = `<!-- lc:solution source=${source} -->\ncontent\n<!-- /lc:solution -->`;
+      const anchors = parseAnchors(body);
+      expect(anchors[0]!.params.source).toBe(source);
+    }
+  });
+});
+
+describe('resolveAnchorDefaults', () => {
+  it('fills missing slug with context slug', () => {
+    const params = { source: 'official' };
+    const resolved = resolveAnchorDefaults(params, 'two-sum');
+    expect(resolved.slug).toBe('two-sum');
+    expect(resolved.source).toBe('official');
+  });
+
+  it('preserves existing slug', () => {
+    const params = { slug: 'three-sum', source: 'official' };
+    const resolved = resolveAnchorDefaults(params, 'two-sum');
+    expect(resolved.slug).toBe('three-sum');
+  });
+
+  it('handles missing context slug gracefully', () => {
+    const params = { source: 'official' };
+    const resolved = resolveAnchorDefaults(params);
+    expect(resolved.slug).toBeUndefined();
+  });
+});
+
+describe('Precise anchor matching', () => {
+  it('throws error when multiple anchors match (ambiguous match)', () => {
+    const body = `
+<!-- lc:solution slug="two-sum" source="url" url="https://example1.com" -->
+solution 1
+<!-- /lc:solution -->
+
+<!-- lc:solution slug="two-sum" source="url" url="https://example2.com" -->
+solution 2
+<!-- /lc:solution -->
+`;
+
+    // Matching with slug+source only should throw (ambiguous)
+    expect(() => {
+      rewriteAnchorByParams(body, 'solution', { slug: 'two-sum', source: 'url' }, 'new content');
+    }).toThrow(/Ambiguous match: 2 anchors/);
+  });
+
+  it('precisely matches anchor with all distinguishing params', () => {
+    const body = `
+<!-- lc:solution slug="two-sum" source="url" url="https://example1.com" -->
+solution 1
+<!-- /lc:solution -->
+
+<!-- lc:solution slug="two-sum" source="url" url="https://example2.com" -->
+solution 2
+<!-- /lc:solution -->
+`;
+
+    // Matching with slug+source+url should uniquely identify the anchor
+    const updated = rewriteAnchorByParams(
+      body,
+      'solution',
+      { slug: 'two-sum', source: 'url', url: 'https://example2.com' },
+      'updated solution 2'
+    );
+
+    expect(updated).not.toBeNull();
+    expect(updated).toContain('updated solution 2');
+    expect(updated).toContain('solution 1'); // First solution unchanged
+  });
+
+  it('matches single anchor without ambiguity', () => {
+    const body = '<!-- lc:solution slug="two-sum" source="official" -->\ncontent\n<!-- /lc:solution -->';
+    const updated = rewriteAnchorByParams(
+      body,
+      'solution',
+      { slug: 'two-sum', source: 'official' },
+      'new content'
+    );
+    expect(updated).not.toBeNull();
+    expect(updated).toContain('new content');
   });
 });

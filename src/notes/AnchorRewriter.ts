@@ -6,6 +6,7 @@ import { parseAnchors, replaceAnchorContent, type AnchorRegion } from './AnchorP
 /**
  * Rewrite the content of a single anchor region identified by type + params.
  * Returns the updated body, or null if no matching anchor found.
+ * Throws an error if multiple anchors match (ambiguous match).
  */
 export function rewriteAnchorByParams(
   body: string,
@@ -15,8 +16,8 @@ export function rewriteAnchorByParams(
 ): string | null {
   const anchors = parseAnchors(body);
 
-  // Find anchor matching type and all specified params
-  const target = anchors.find(a => {
+  // Find ALL anchors matching type and all specified params
+  const matches = anchors.filter(a => {
     if (a.type !== type) return false;
     for (const [key, value] of Object.entries(matchParams)) {
       if ((a.params as Record<string, string>)[key] !== value) return false;
@@ -24,6 +25,23 @@ export function rewriteAnchorByParams(
     return true;
   });
 
+  // No match found
+  if (matches.length === 0) return null;
+
+  // Ambiguous match - multiple anchors match the criteria
+  // This indicates the caller should provide more specific params (e.g., url or index)
+  if (matches.length > 1) {
+    const paramStr = Object.entries(matchParams)
+      .map(([k, v]) => `${k}="${v}"`)
+      .join(' ');
+    throw new Error(
+      `Ambiguous match: ${matches.length} anchors of type "${type}" match params {${paramStr}}. ` +
+      `Provide more specific params (e.g., url or index) to uniquely identify the target anchor.`
+    );
+  }
+
+  // Unique match found
+  const target = matches[0];
   if (!target) return null;
   return replaceAnchorContent(body, target, newContent);
 }
