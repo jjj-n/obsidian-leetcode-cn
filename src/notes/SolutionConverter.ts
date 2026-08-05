@@ -3,6 +3,8 @@
 // Handles official editorial (Markdown + $$ + iframe) and community 题解.
 // Auto-splits into ## 题解 (code) and ## 题解思路 (prose).
 
+import { htmlToMarkdown } from './htmlToMarkdown';
+
 /** Internal helper — check if a string looks like HTML. */
 function looksLikeHtml(content: string): boolean {
   return /<\/?\w+[^>]*>/i.test(content) && !content.startsWith('#');
@@ -100,27 +102,25 @@ export function convertSolution(raw: SolutionInput): ConvertedSolution {
   // Step 1 — strip [TOC]
   content = content.replace(/^\[TOC\]\s*/m, '').trim();
 
-  // Step 2 — if HTML, convert to Markdown (community 题解 case)
+  // Step 2 — if HTML, strip dangerous tags first, convert playground iframes, then convert to Markdown
   if (looksLikeHtml(content)) {
-    // Paste-sanitize signal: strip script/style tags, keep structure.
+    // Strip script/style before htmlToMarkdown to prevent them from being processed
     content = content.replace(/<script[\s\S]*?<\/script>/gi, '');
     content = content.replace(/<style[\s\S]*?<\/style>/gi, '');
-    // We'll full-convert HTML→MD in a later phase; for now, strip tags.
-    // TODO: wire through htmlToMarkdown for community 题解 HTML content.
+    // Convert playground iframes to links BEFORE htmlToMarkdown (which would strip them)
+    content = convertPlaygroundIframes(content);
+    content = htmlToMarkdown(content);
   }
 
   // Step 3 — normalize inline math
   content = normalizeInlineMath(content);
 
-  // Step 4 — convert playground iframes to links
-  content = convertPlaygroundIframes(content);
-
-  // Step 5 — remove stray HTML tags
+  // Step 4 — remove stray HTML tags
   content = content.replace(/<br\s*\/?>/gi, '\n');
   content = content.replace(/<\/?[bi]>/gi, '**');
   content = content.replace(/<[^>]+>/g, '');
 
-  // Step 6 — split
+  // Step 5 — split
   const { code, approach } = splitSolutionContent(content);
 
   return { title: raw.title, code, approach };

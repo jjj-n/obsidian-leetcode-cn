@@ -23,10 +23,11 @@
 import type { App, TFile } from 'obsidian';
 import type { DetailCacheEntry } from './types';
 
-/** The 7 lc-* frontmatter keys Phase 2 writes. Ordered to match D-03 YAML. */
+/** The 8 lc-* frontmatter keys Phase 2 writes. Ordered to match D-03 YAML. */
 export const PLUGIN_LC_KEYS = [
   'lc-id',
   'lc-slug',
+  'lc-slugs',
   'lc-title',
   'lc-difficulty',
   'lc-url',
@@ -132,6 +133,12 @@ export interface NoteTemplateInput {
    */
   pluginTags: string[];
   /**
+   * Phase 08: optional array of slugs for multi-problem-per-note support.
+   * When provided, the note will use `lc-slugs` array in frontmatter.
+   * When omitted, the note uses `lc-slug` (single problem).
+   */
+  slugs?: string[];
+  /**
    * Caller-supplied hint for the on-first-write value of `lc-status` (GAP-2a).
    * D-04 preservation: applyFrontmatter NEVER downgrades an existing 'accepted'
    * value, regardless of this hint. Use `mapStatusDisplay` to derive this from
@@ -217,9 +224,11 @@ export function buildFrontmatterInput(
   detail: DetailCacheEntry,
   defaultLanguage: string,
   initialStatus?: LcStatus,
+  /** Phase 08: when adding to multi-problem note, pass the slug to track. */
+  addSlug?: string,
 ): NoteTemplateInput {
   const slug = slugFromUrl(detail.url, detail.title);
-  return {
+  const result: NoteTemplateInput = {
     id: detail.id,
     slug,
     title: detail.title,
@@ -229,6 +238,11 @@ export function buildFrontmatterInput(
     pluginTags: [`${LC_TAG_PREFIX}${detail.difficulty.toLowerCase()}`],
     initialStatus,
   };
+  // Phase 08: if adding to multi-problem note, provide slugs array
+  if (addSlug) {
+    result.slugs = [addSlug];
+  }
+  return result;
 }
 
 /**
@@ -264,10 +278,25 @@ export async function applyFrontmatter(
   await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
     // 1. Plugin-owned lc-* keys.
     fm['lc-id'] = input.id;
-    fm['lc-slug'] = input.slug;
     fm['lc-title'] = input.title;
     fm['lc-difficulty'] = input.difficulty;
     fm['lc-url'] = input.url;
+
+    // Phase 08: multi-problem-per-note support.
+    // Auto-upgrade: if note has lc-slug and we're adding slugs[], convert to lc-slugs.
+    if (input.slugs && input.slugs.length > 1) {
+      // Multi-problem: use lc-slugs array
+      fm['lc-slugs'] = input.slugs;
+      delete fm['lc-slug'];
+    } else if (input.slugs && input.slugs.length === 1) {
+      // Single problem via slugs[]: use lc-slug
+      fm['lc-slug'] = input.slugs[0];
+      delete fm['lc-slugs'];
+    } else {
+      // Legacy single problem: use lc-slug
+      fm['lc-slug'] = input.slug;
+      delete fm['lc-slugs'];
+    }
     // D-04 + GAP-2a: on first write (or when the existing value is empty /
     // 'untouched'), adopt the caller's `initialStatus` hint (defaulting to
     // 'untouched' when the caller didn't supply one). NEVER downgrade from an

@@ -64,13 +64,13 @@ solved_date: {{solved_date}}
 
 > 🔗 [{{title_cn}}]({{url}}) · {{difficulty}} · 题号 {{id}}
 
-<!-- lc:problem -->
+<!-- lc:problem slug="{{slug}}" -->
 {{problem}}
 <!-- /lc:problem -->
 
 ## 我的代码
 
-<!-- lc:code -->
+<!-- lc:code slug="{{slug}}" -->
 {{code}}
 <!-- /lc:code -->
 
@@ -80,13 +80,13 @@ solved_date: {{solved_date}}
 
 ## 题解
 
-<!-- lc:solution source=url url="" -->
+<!-- lc:solution slug="{{slug}}" source=url url="" -->
 {{solution}}
 <!-- /lc:solution -->
 
 ## 题解思路
 
-<!-- lc:solution_approach source=url url="" -->
+<!-- lc:solution_approach slug="{{slug}}" source=url url="" -->
 {{solution_approach}}
 <!-- /lc:solution_approach -->
 

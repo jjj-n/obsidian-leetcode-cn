@@ -112,10 +112,11 @@ describe('DEFAULT_TEMPLATE', () => {
     expect(result).toContain('lc-language: python3');
     expect(result).toContain('difficulty: 简单');
     expect(result).toContain('# 两数之和');
-    expect(result).toContain('<!-- lc:problem -->');
+    // Anchors now include slug parameters
+    expect(result).toContain('<!-- lc:problem slug="two-sum" -->');
     expect(result).toContain('<!-- /lc:problem -->');
     expect(result).toContain('## 我的代码');
-    expect(result).toContain('<!-- lc:code -->');
+    expect(result).toContain('<!-- lc:code slug="two-sum" -->');
     expect(result).toContain('<!-- /lc:code -->');
     expect(result).toContain('## 代码思路');
     expect(result).toContain('## 题解');

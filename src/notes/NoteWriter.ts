@@ -47,6 +47,9 @@ import { htmlToMarkdown } from './htmlToMarkdown';
 import { localizeImages } from './ImageDownloader';
 // Phase 3 Plan 07 — retrofit hook for existing + new notes (D-06/D-07/D-09).
 import { rewriteProblemSection } from './HeadingRegion';
+// Phase 06 & 08 — anchor parsing and rewriting for solution/multi-problem support.
+import { parseAnchors, type AnchorRegion } from './AnchorParser';
+import { appendAnchorRegion } from './AnchorRewriter';
 import { ensureLeetcodeBase } from './BaseFile';
 import type { DetailCacheEntry } from './types';
 // Phase 3 Plan 07 — retrofit hook for existing + new notes (D-06/D-07/D-09).
@@ -715,6 +718,130 @@ export class NoteWriter {
       buildFrontmatterInput(entry, this.settings.getDefaultLanguage()),
     );
   }
+
+  /**
+   * Phase 08: add a problem to an existing multi-problem note.
+   * Appends new anchor regions with slug= parameter and updates frontmatter.
+   */
+  async addProblemToNote(
+    file: TFile,
+    slug: string,
+  ): Promise<void> {
+    // Fetch problem detail
+    let detail: NoteWriterDetail | null;
+    try {
+      detail = await this.client.getProblemDetail(slug);
+    } catch (err) {
+      if (isSessionExpired(err)) {
+        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        return;
+      }
+      new Notice(`Couldn't fetch ${slug}. Check your connection.`, 4000);
+      return;
+    }
+
+    if (!detail || !detail.content) {
+      new Notice(`LeetCode problem not found: ${slug}.`, 4000);
+      return;
+    }
+
+    // Persist cache entry
+    const entry = toDetailCacheEntry(detail, this.settings.getRegion());
+    await this.settings.setProblemDetail(slug, entry);
+
+    // Render problem content
+    const problemMarkdown = htmlToMarkdown(entry.contentHtml);
+    const defaultLang = this.settings.getDefaultLanguage();
+    const starterCode = pickStarterCode(entry, defaultLang);
+    const tagNames = (entry.topicTags ?? []).map((t) => t.name).join(', ');
+
+    // Build template data for this slug
+    const templateData = buildTemplateData({
+      slug,
+      id: entry.id,
+      title: entry.title,
+      title_cn: entry.titleCn ?? entry.title,
+      difficulty: entry.difficulty,
+      url: entry.url,
+      language: defaultLang,
+      problemMarkdown,
+      starterCode,
+      tagsLabel: tagNames || entry.difficulty.toLowerCase(),
+    });
+
+    // Render anchors for this slug
+    const template = this.settings.getNoteTemplate() || DEFAULT_TEMPLATE;
+    const rendered = renderTemplate(template, templateData);
+
+    // Extract anchor regions from rendered template
+    const anchorRegions = extractAnchorRegions(rendered);
+
+    // Append anchor regions to note body
+    await this.app.vault.process(file, (current) => {
+      let updated = current;
+      for (const region of anchorRegions) {
+        updated = appendAnchorRegion(updated, region.type, region.params, region.content);
+      }
+      return updated;
+    });
+
+    // Update frontmatter: upgrade to lc-slugs if needed
+    await applyFrontmatter(
+      this.app,
+      file,
+      buildFrontmatterInput(entry, defaultLang, undefined, slug),
+    );
+
+    new Notice(`Added ${detail.title} to note.`, 3000);
+  }
+
+  /**
+   * Phase 06: refresh solution anchors for a specific slug.
+   * Fetches solution content and rewrites <!-- lc:solution --> and <!-- lc:solution_approach --> anchors.
+   */
+  async refreshSolution(
+    file: TFile,
+    slug: string,
+    solutionUrl?: string,
+  ): Promise<void> {
+    // TODO: implement solution fetching and anchor rewriting
+    // This will be implemented in Phase 06
+    new Notice('Solution refresh not yet implemented.', 3000);
+  }
+}
+
+/**
+ * Helper: extract anchor regions from a rendered template.
+ * Returns array of { type, params, content } for each anchor found.
+ */
+function extractAnchorRegions(rendered: string): Array<{
+  type: string;
+  params: Record<string, string>;
+  content: string;
+}> {
+  const anchors = parseAnchors(rendered);
+  const regions: Array<{
+    type: string;
+    params: Record<string, string>;
+    content: string;
+  }> = [];
+
+  for (const anchor of anchors) {
+    const content = rendered.slice(anchor.contentStart, anchor.contentEnd).trim();
+    const params: Record<string, string> = {};
+    if (anchor.params.slug) params.slug = anchor.params.slug;
+    if (anchor.params.source) params.source = anchor.params.source;
+    if (anchor.params.url) params.url = anchor.params.url;
+    if (anchor.params.index) params.index = anchor.params.index;
+
+    regions.push({
+      type: anchor.type,
+      params,
+      content,
+    });
+  }
+
+  return regions;
 }
 
 /**

@@ -134,18 +134,18 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     expect(body).toMatch(/^tags: \[leetcode, 数组, 哈希表\]$/m);
     expect(body).toMatch(/^solved_date: \d{4}-\d{2}-\d{2}$/m);
 
-    // (c) Plugin-owned anchors properly opened AND closed.
-    expect(body).toContain('<!-- lc:problem -->');
+    // (c) Plugin-owned anchors properly opened AND closed (with slug parameters).
+    expect(body).toContain('<!-- lc:problem slug="two-sum" -->');
     expect(body).toContain('<!-- /lc:problem -->');
-    expect(body).toContain('<!-- lc:code -->');
+    expect(body).toContain('<!-- lc:code slug="two-sum" -->');
     expect(body).toContain('<!-- /lc:code -->');
-    expect(body).toContain('<!-- lc:solution source=url url="" -->');
+    expect(body).toContain('<!-- lc:solution slug="two-sum" source=url url="" -->');
     expect(body).toContain('<!-- /lc:solution -->');
-    expect(body).toContain('<!-- lc:solution_approach source=url url="" -->');
+    expect(body).toContain('<!-- lc:solution_approach slug="two-sum" source=url url="" -->');
     expect(body).toContain('<!-- /lc:solution_approach -->');
 
     // (d) Anchor bodies carry the expected content.
-    const problemRegion = body.match(/<!-- lc:problem -->\n([\s\S]*?)\n<!-- \/lc:problem -->/);
+    const problemRegion = body.match(/<!-- lc:problem slug="two-sum" -->\n([\s\S]*?)\n<!-- \/lc:problem -->/);
     expect(problemRegion).not.toBeNull();
     expect(problemRegion![1]).toContain('nums');
     expect(problemRegion![1]).toContain('target');
@@ -153,7 +153,7 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     expect(problemRegion![1]).toMatch(/Example 1/i);
     expect(problemRegion![1]).toContain('[2,7,11,15]');
 
-    const codeRegion = body.match(/<!-- lc:code -->\n([\s\S]*?)\n<!-- \/lc:code -->/);
+    const codeRegion = body.match(/<!-- lc:code slug="two-sum" -->\n([\s\S]*?)\n<!-- \/lc:code -->/);
     expect(codeRegion).not.toBeNull();
     expect(codeRegion![1]).toContain('class Solution:');
     expect(codeRegion![1]).toContain('def twoSum');
