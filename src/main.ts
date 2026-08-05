@@ -123,11 +123,11 @@ export default class LeetCodePlugin extends Plugin {
     // Ticket #09 — solution picker UX: marker absorption + modal input.
     this.addCommand({
       id: 'absorb-solution-markers',
-      name: 'Absorb solution markers',
+      name: '吸收题解标记',
       editorCallback: async (editor, view) => {
         const file = view.file;
         if (!file) {
-          new Notice('No active file.', 3000);
+          new Notice('没有活动文件。', 3000);
           return;
         }
 
@@ -135,13 +135,13 @@ export default class LeetCodePlugin extends Plugin {
         const markers = parseSolutionMarkers(content);
 
         if (markers.length === 0) {
-          new Notice('No solution markers found. Add lines like "题解链接: <URL>".', 4000);
+          new Notice('未找到题解标记。请添加类似"题解链接: <URL>"的行。', 4000);
           return;
         }
 
         const emptyAnchors = findEmptySolutionAnchors(content);
         if (emptyAnchors.length === 0) {
-          new Notice('No empty solution anchors found. Add an empty <!-- lc:solution --> anchor first.', 4000);
+          new Notice('未找到空题解锚点。请先添加一个空的 <!-- lc:solution --> 锚点。', 4000);
           return;
         }
 
@@ -176,20 +176,20 @@ export default class LeetCodePlugin extends Plugin {
         await editor.setValue(updatedContent);
 
         if (processed > 0) {
-          new Notice(`Absorbed ${processed} solution marker(s).`, 3000);
+          new Notice(`已吸收 ${processed} 个题解标记。`, 3000);
         } else {
-          new Notice('No solutions could be processed.', 4000);
+          new Notice('无法处理任何题解。', 4000);
         }
       },
     });
 
     this.addCommand({
       id: 'input-solution-url',
-      name: 'Input solution URL',
+      name: '输入题解 URL',
       editorCallback: (editor, view) => {
         const file = view.file;
         if (!file) {
-          new Notice('No active file.', 3000);
+          new Notice('没有活动文件。', 3000);
           return;
         }
 
@@ -197,7 +197,7 @@ export default class LeetCodePlugin extends Plugin {
         const emptyAnchors = findEmptySolutionAnchors(content);
 
         if (emptyAnchors.length === 0) {
-          new Notice('No empty solution anchors found. Add an empty <!-- lc:solution --> anchor first.', 4000);
+          new Notice('未找到空题解锚点。请先添加一个空的 <!-- lc:solution --> 锚点。', 4000);
           return;
         }
 
@@ -218,10 +218,10 @@ export default class LeetCodePlugin extends Plugin {
           // Trigger solution refresh
           try {
             await this.notes.refreshSolution(file, anchor.params.slug || '', url);
-            new Notice('Solution added successfully.', 3000);
+            new Notice('题解添加成功。', 3000);
           } catch (err) {
             logger.debug('input-solution-url: refresh failed', err);
-            new Notice('Failed to fetch solution. Check the URL and try again.', 4000);
+            new Notice('获取题解失败。请检查 URL 并重试。', 4000);
           }
         }).open();
       },
@@ -251,9 +251,9 @@ class SolutionUrlModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
-    contentEl.createEl('h2', { text: 'Input Solution URL' });
+    contentEl.createEl('h2', { text: '输入题解 URL' });
     contentEl.createEl('p', {
-      text: 'Paste a leetcode.cn solution URL:',
+      text: '粘贴 leetcode.cn 题解 URL：',
       cls: 'solution-url-modal-description',
     });
 
@@ -271,7 +271,7 @@ class SolutionUrlModal extends Modal {
     new Setting(contentEl)
       .addButton((btn) =>
         btn
-          .setButtonText('Submit')
+          .setButtonText('提交')
           .setCta()
           .onClick(() => {
             this.close();
@@ -279,7 +279,7 @@ class SolutionUrlModal extends Modal {
           }),
       )
       .addButton((btn) =>
-        btn.setButtonText('Cancel').onClick(() => {
+        btn.setButtonText('取消').onClick(() => {
           this.close();
         }),
       );
