@@ -164,41 +164,49 @@ Single-click on a problem in the LeetCode browser previews it in a new tab. Shif
 
 Only one preview tab is open at a time — clicking another problem reuses the same tab. After you click `Start Problem`, the preview detaches itself and the new note takes focus.
 
-## Network usage
+## 网络使用 / Network usage
 
-This plugin communicates with the following hosts:
+本插件仅与以下主机通信 / This plugin communicates with the following hosts only：
 
-- `leetcode.cn` / `leetcode.com` — depending on Region setting, fetches problems, submissions, and solution articles from the selected LeetCode site. All traffic uses Obsidian's built-in `requestUrl`. Switching regions does not modify existing notes.
-- AI provider hosts — only when you have configured an active AI provider in Settings → AI. The plugin contacts at most ONE of these per AI call, depending on your `Active AI provider` selection:
-  - `https://api.anthropic.com` — when `Active AI provider = Anthropic`
-  - `https://api.openai.com` — when `Active AI provider = OpenAI`
-  - `https://openrouter.ai` — when `Active AI provider = OpenRouter`
-  - your local Ollama host (default `http://localhost:11434`) — when `Active AI provider = Ollama`
-  - your custom OpenAI-compatible endpoint URL — when `Active AI provider = Custom`
-  - **AWS Bedrock**: `https://bedrock-runtime.{region}.amazonaws.com` where `{region}` is your configured AWS region (e.g. `us-east-1`) — when `Active AI provider = AWS Bedrock`
+- `leetcode.cn` — GraphQL API（`/graphql`）：抓取题目详情、用户 AC 提交、社区题解文章、官方题解。
+- `leetcode.cn` — REST API：用户认证、题目标签索引。
+- `pic.leetcode-cn.com` — 题面和题解中的图片 CDN（仅在 Settings → Images 开启"下载图片到 vault"时才下载，否则保留 CDN 链接）。
+- `leetcode.cn/accounts/login/` — 嵌入式浏览器登录页（仅登录时使用）。
 
-No telemetry. No analytics. No other endpoints.
+所有 HTTP 流量通过 Obsidian 内建的 `requestUrl`，绕过 Electron CORS 限制。无遥测、无分析、无其他端点。
 
-### Authentication
+- `leetcode.cn` — GraphQL API (`/graphql`): problem details, user AC submissions, community solution articles, official editorial.
+- `leetcode.cn` — REST API: user authentication, problem tag index.
+- `pic.leetcode-cn.com` — image CDN for problem/solution images (only downloaded when Settings → Images → "Download images to vault" is ON; otherwise CDN links are preserved).
+- `leetcode.cn/accounts/login/` — embedded browser login page (only used during login).
 
-Authentication is handled via an embedded Obsidian `BrowserWindow` that captures your LC session cookie after you sign in. The cookie is stored only in `.obsidian/plugins/leetcode/data.json` on your local machine, is never transmitted anywhere except leetcode.com, and is never logged.
+All HTTP traffic goes through Obsidian's built-in `requestUrl`, bypassing Electron CORS restrictions. No telemetry. No analytics. No other endpoints.
 
-AI provider API keys are stored in plain text in `.obsidian/plugins/leetcode/data.json` on your local machine. Keys are never logged (the plugin's logger redacts every known key field name; see `src/shared/logger.ts`). Keys are transmitted only to the configured provider's endpoint.
+### 认证 / Authentication
 
-### Cost expectations
+认证通过 Obsidian 嵌入式 `BrowserWindow` 完成——登录后捕获 LC session cookie。Cookie 仅存储在本地 `.obsidian/plugins/leetcode-cn/data.json` 中，除 `leetcode.cn` 外不传输到任何地方，且永不记录到日志。
 
-AI features incur per-call cost charged by your selected provider. The following features make AI calls:
+Authentication is handled via an embedded Obsidian `BrowserWindow` that captures your LC session cookie after you sign in. The cookie is stored only in `.obsidian/plugins/leetcode-cn/data.json` on your local machine, is never transmitted anywhere except `leetcode.cn`, and is never logged.
 
-- **AI Debug** (Phase 08) — one streaming call per debug session to analyze your wrong-answer or TLE verdict.
-- **AI Review** (Phase 09) — one call per accepted solution when opt-in review is enabled.
-- **AI Knowledge Graph classification** (Phase 11) — approximately one call per accepted problem for pattern classification.
-- **AI Contest Analysis** (Phase 11) — approximately one call per completed contest for performance summary.
+## 发布流程 / Release process
 
-Typical cost per accepted solution: ~$0.01-0.05 depending on provider and model (classification + optional review). See your provider's pricing page for current rates: [Anthropic](https://www.anthropic.com/pricing), [OpenAI](https://openai.com/pricing), [OpenRouter](https://openrouter.ai/models), [AWS Bedrock](https://aws.amazon.com/bedrock/pricing/).
+维护者发布新版本步骤 / Maintainer release steps：
 
-The "Test connection" action sends a metadata-only `GET /v1/models` (or `GET /api/tags` for Ollama) for OpenAI / OpenRouter / Custom / Ollama — these are free. For Anthropic, "Test connection" sends a 1-token chat completion (~$0.0001 per click).
-
-Per-feature daily cost cap UI ships in Phase 09. Default model identifiers may rot — when "Test connection" reports `model not found`, update the `Model` field manually.
+1. 更新 `manifest.json` 中的 `version` 字段 / Bump `version` in `manifest.json`.
+2. 更新 `versions.json`，添加 `"新版本号": "最低兼容 Obsidian 版本"` 映射 / Add `"new-version": "min-obsidian-version"` entry to `versions.json`.
+3. 运行 `npm run build` 生成 `main.js` / Run `npm run build` to produce `main.js`.
+4. 创建 GitHub release，tag 必须与 `manifest.json` 的 `version` 完全匹配 / Create a GitHub release; the tag **must** match `manifest.json`'s `version` exactly.
+5. 上传 `main.js` 和 `manifest.json` 作为 release assets / Attach `main.js` and `manifest.json` as release assets.
+6. 向 [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) 提交 PR，在 `community-plugins.json` 中添加/更新条目 / Submit a PR to [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) adding/updating the entry in `community-plugins.json`:
+   ```json
+   {
+     "id": "leetcode-cn",
+     "name": "LeetCode CN",
+     "author": "jjj-n",
+     "description": "把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中。",
+     "repo": "jjj-n/obsidian-leetcode-cn"
+   }
+   ```
 
 ## Configuration
 
