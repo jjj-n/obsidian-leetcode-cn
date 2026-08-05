@@ -29,6 +29,8 @@ import { LeetCodeSettingTab } from './settings/SettingsTab';
 import { pasteSanitize } from './notes/PasteSanitizer';
 import { parseSolutionMarkers, findEmptySolutionAnchors, findNearestEmptySolutionAnchor, removeMarkers, updateAnchorUrl } from './notes/SolutionMarker';
 import { SolutionUrlModal } from './ui/SolutionUrlModal';
+import { RefreshScopeModal, type RefreshScope } from './ui/RefreshScopeModal';
+import { parseAnchors } from './notes/AnchorParser';
 import { logger } from './shared/logger';
 
 export default class LeetCodePlugin extends Plugin {
@@ -229,6 +231,47 @@ export default class LeetCodePlugin extends Plugin {
           } catch (err) {
             logger.debug('input-solution-url: refresh failed', err);
             new Notice('获取题解失败。请检查 URL 并重试。', 4000);
+          }
+        }).open();
+      },
+    });
+
+    // Ticket #10 — refresh command with scope selection.
+    this.addCommand({
+      id: 'refresh-solutions',
+      name: '刷新题解',
+      editorCallback: (editor, view) => {
+        const file = view.file;
+        if (!file) {
+          new Notice('没有活动文件。', 3000);
+          return;
+        }
+
+        new RefreshScopeModal(this.app, async (scope: RefreshScope) => {
+          const cursor = editor.getCursor();
+          const cursorOffset = editor.posToOffset(cursor);
+
+          if (scope === 'single') {
+            await this.notes.refreshSingleAnchor(file, cursorOffset);
+            new Notice('已刷新选定锚点。', 3000);
+          } else if (scope === 'problem') {
+            // Determine slug from cursor position
+            const content = editor.getValue();
+            const anchors = parseAnchors(content);
+            const nearest = anchors.reduce((closest, anchor) => {
+              const anchorMid = (anchor.startOffset + anchor.endOffset) / 2;
+              const closestMid = (closest.startOffset + closest.endOffset) / 2;
+              return Math.abs(anchorMid - cursorOffset) < Math.abs(closestMid - cursorOffset)
+                ? anchor : closest;
+            });
+            const slug = nearest.params.slug;
+            if (!slug) {
+              new Notice('无法确定当前题目的 slug。', 4000);
+              return;
+            }
+            await this.notes.refreshProblemAnchors(file, slug);
+          } else if (scope === 'note') {
+            await this.notes.refreshAllNoteAnchors(file);
           }
         }).open();
       },

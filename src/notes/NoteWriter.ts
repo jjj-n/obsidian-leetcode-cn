@@ -904,6 +904,144 @@ export class NoteWriter {
 
     new Notice(`Updated solution for ${slug}.`, 3000);
   }
+
+  /**
+   * Phase 10: Refresh a single anchor closest to the cursor position.
+   */
+  async refreshSingleAnchor(file: TFile, cursorOffset: number): Promise<void> {
+    const currentContent = await this.app.vault.read(file);
+    const anchors = parseAnchors(currentContent);
+    if (anchors.length === 0) {
+      new Notice('未找到锚点。', 4000);
+      return;
+    }
+
+    // Find anchor closest to cursor
+    const target = anchors.reduce((closest, anchor) => {
+      const anchorMid = (anchor.startOffset + anchor.endOffset) / 2;
+      const closestMid = (closest.startOffset + closest.endOffset) / 2;
+      return Math.abs(anchorMid - cursorOffset) < Math.abs(closestMid - cursorOffset)
+        ? anchor : closest;
+    });
+
+    const updated = await this.refreshAnchorInRange(currentContent, target);
+    await this.app.vault.process(file, () => updated);
+  }
+
+  /**
+   * Phase 10: Refresh all anchors for a specific slug.
+   */
+  async refreshProblemAnchors(file: TFile, slug: string): Promise<void> {
+    const currentContent = await this.app.vault.read(file);
+    const anchors = parseAnchors(currentContent);
+    const targets = anchors.filter(a => a.params.slug === slug);
+
+    if (targets.length === 0) {
+      new Notice(`未找到 slug=${slug} 的锚点。`, 4000);
+      return;
+    }
+
+    let updated = currentContent;
+    for (const target of targets) {
+      updated = await this.refreshAnchorInRange(updated, target);
+    }
+    await this.app.vault.process(file, () => updated);
+    new Notice(`已刷新 ${slug} 的所有锚点。`, 3000);
+  }
+
+  /**
+   * Phase 10: Refresh all anchors in the note.
+   */
+  async refreshAllNoteAnchors(file: TFile): Promise<void> {
+    const currentContent = await this.app.vault.read(file);
+    const anchors = parseAnchors(currentContent);
+    if (anchors.length === 0) {
+      new Notice('未找到锚点。', 4000);
+      return;
+    }
+
+    let updated = currentContent;
+    for (const anchor of anchors) {
+      updated = await this.refreshAnchorInRange(updated, anchor);
+    }
+    await this.app.vault.process(file, () => updated);
+    new Notice('已刷新整篇笔记的所有锚点。', 3000);
+  }
+
+  /**
+   * Helper: refresh a single anchor's content within a body string.
+   * Fetches fresh content based on anchor type and params, then rewrites.
+   */
+  private async refreshAnchorInRange(
+    body: string,
+    anchor: AnchorRegion,
+  ): Promise<string> {
+    try {
+      if (anchor.type === 'problem') {
+        const slug = anchor.params.slug || '';
+        const detail = await this.client.getProblemDetail(slug);
+        if (detail && detail.content) {
+          const entry = toDetailCacheEntry(detail, this.settings.getRegion());
+          const markdown = htmlToMarkdown(entry.contentHtml);
+          return rewriteAnchorByParams(body, 'problem', { slug }, markdown) ?? body;
+        }
+      } else if (anchor.type === 'code') {
+        const slug = anchor.params.slug || '';
+        const detail = await this.client.getProblemDetail(slug);
+        if (detail) {
+          const entry = toDetailCacheEntry(detail, this.settings.getRegion());
+          const code = pickStarterCode(entry, this.settings.getDefaultLanguage());
+          return rewriteAnchorByParams(body, 'code', { slug }, code) ?? body;
+        }
+      } else if (anchor.type === 'solution' || anchor.type === 'solution_approach') {
+        const slug = anchor.params.slug || '';
+        const url = anchor.params.url;
+        if (url) {
+          const converted = await this.fetchAndConvertSolution(slug, url);
+          if (converted) {
+            const params: Record<string, string> = { slug, source: 'url', url };
+            const content = anchor.type === 'solution' ? converted.code : converted.approach;
+            return rewriteAnchorByParams(body, anchor.type, params, content) ?? body;
+          }
+        }
+      }
+    } catch (err) {
+      if (isSessionExpired(err)) {
+        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+      } else {
+        logger.debug('refreshAnchorInRange: failed', err);
+        new Notice('刷新失败，保留原内容。', 4000);
+      }
+    }
+    return body;
+  }
+
+  /**
+   * Helper: fetch and convert a solution by URL.
+   */
+  private async fetchAndConvertSolution(
+    slug: string,
+    solutionUrl: string,
+  ): Promise<{ code: string; approach: string } | null> {
+    if (!this.client.lcCN) return null;
+
+    const parsed = parseCNSolutionUrl(solutionUrl);
+    if (!parsed) return null;
+
+    let article: SolutionArticle | null = null;
+    if (parsed.type === 'community' && parsed.articleSlug) {
+      article = await fetchCNCommunitySolution(this.client.lcCN, parsed.articleSlug);
+    } else {
+      article = await fetchCNOfficialSolution(this.client.lcCN, slug);
+    }
+
+    if (!article) return null;
+
+    return convertSolution({
+      title: article.title,
+      content: article.content,
+    });
+  }
 }
 
 /**
