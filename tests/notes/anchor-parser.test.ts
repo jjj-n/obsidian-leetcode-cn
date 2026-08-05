@@ -21,26 +21,26 @@ describe('parseAnchors', () => {
     const body = '<!-- lc:problem -->\ncontent\n<!-- /lc:problem -->';
     const anchors = parseAnchors(body);
     expect(anchors).toHaveLength(1);
-    expect(anchors[0].type).toBe('problem');
-    expect(anchors[0].params).toEqual({});
-    expect(body.slice(anchors[0].contentStart, anchors[0].contentEnd)).toBe('\ncontent\n');
+    expect(anchors[0]!.type).toBe('problem');
+    expect(anchors[0]!.params).toEqual({});
+    expect(body.slice(anchors[0]!.contentStart, anchors[0]!.contentEnd)).toBe('\ncontent\n');
   });
 
   it('parses anchor with slug parameter', () => {
     const body = '<!-- lc:problem slug="two-sum" -->\ncontent\n<!-- /lc:problem -->';
     const anchors = parseAnchors(body);
     expect(anchors).toHaveLength(1);
-    expect(anchors[0].type).toBe('problem');
-    expect(anchors[0].params.slug).toBe('two-sum');
+    expect(anchors[0]!.type).toBe('problem');
+    expect(anchors[0]!.params.slug).toBe('two-sum');
   });
 
   it('parses anchor with multiple parameters', () => {
     const body = '<!-- lc:solution slug="two-sum" source="url" url="https://..." -->\ncontent\n<!-- /lc:solution -->';
     const anchors = parseAnchors(body);
     expect(anchors).toHaveLength(1);
-    expect(anchors[0].params.slug).toBe('two-sum');
-    expect(anchors[0].params.source).toBe('url');
-    expect(anchors[0].params.url).toBe('https://...');
+    expect(anchors[0]!.params.slug).toBe('two-sum');
+    expect(anchors[0]!.params.source).toBe('url');
+    expect(anchors[0]!.params.url).toBe('https://...');
   });
 
   it('parses multiple anchors', () => {
@@ -59,12 +59,12 @@ another problem
 `;
     const anchors = parseAnchors(body);
     expect(anchors).toHaveLength(3);
-    expect(anchors[0].type).toBe('problem');
-    expect(anchors[0].params.slug).toBe('two-sum');
-    expect(anchors[1].type).toBe('code');
-    expect(anchors[1].params.slug).toBe('two-sum');
-    expect(anchors[2].type).toBe('problem');
-    expect(anchors[2].params.slug).toBe('three-sum');
+    expect(anchors[0]!.type).toBe('problem');
+    expect(anchors[0]!.params.slug).toBe('two-sum');
+    expect(anchors[1]!.type).toBe('code');
+    expect(anchors[1]!.params.slug).toBe('two-sum');
+    expect(anchors[2]!.type).toBe('problem');
+    expect(anchors[2]!.params.slug).toBe('three-sum');
   });
 });
 
@@ -85,8 +85,8 @@ another
 `;
     const found = findAnchorsBySlug(body, 'two-sum');
     expect(found).toHaveLength(2);
-    expect(found[0].type).toBe('problem');
-    expect(found[1].type).toBe('code');
+    expect(found[0]!.type).toBe('problem');
+    expect(found[1]!.type).toBe('code');
   });
 
   it('returns empty array when slug not found', () => {
@@ -138,7 +138,8 @@ describe('replaceAnchorContent', () => {
   it('replaces content within an anchor', () => {
     const body = '<!-- lc:problem -->\nold content\n<!-- /lc:problem -->';
     const anchors = parseAnchors(body);
-    const updated = replaceAnchorContent(body, anchors[0], 'new content');
+    expect(anchors).toHaveLength(1);
+    const updated = replaceAnchorContent(body, anchors[0]!, 'new content');
     expect(updated).toBe('<!-- lc:problem -->\nnew content\n<!-- /lc:problem -->');
   });
 });

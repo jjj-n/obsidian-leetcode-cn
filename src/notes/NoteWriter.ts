@@ -49,10 +49,12 @@ import { localizeImages } from './ImageDownloader';
 import { rewriteProblemSection } from './HeadingRegion';
 // Phase 06 & 08 — anchor parsing and rewriting for solution/multi-problem support.
 import { parseAnchors, type AnchorRegion } from './AnchorParser';
-import { appendAnchorRegion } from './AnchorRewriter';
+import { appendAnchorRegion, rewriteAnchorByParams } from './AnchorRewriter';
 import { ensureLeetcodeBase } from './BaseFile';
+// Phase 07 — solution fetching and conversion.
+import { fetchCNOfficialSolution, fetchCNCommunitySolution, parseCNSolutionUrl, type SolutionArticle } from '../api/LeetCodeCNSolutionAdapter';
+import { convertSolution } from './SolutionConverter';
 import type { DetailCacheEntry } from './types';
-// Phase 3 Plan 07 — retrofit hook for existing + new notes (D-06/D-07/D-09).
 
 /** D-11 / D-14: 7 days between forced background refreshes. */
 export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -64,6 +66,8 @@ export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  */
 export interface NoteWriterClient {
   getProblemDetail(slug: string): Promise<NoteWriterDetail | null>;
+  /** Phase 07: lcCN instance for solution fetching. */
+  lcCN?: InstanceType<typeof import('@leetnotion/leetcode-api').LeetCodeCN>;
 }
 
 /**
@@ -796,17 +800,97 @@ export class NoteWriter {
   }
 
   /**
-   * Phase 06: refresh solution anchors for a specific slug.
-   * Fetches solution content and rewrites <!-- lc:solution --> and <!-- lc:solution_approach --> anchors.
+   * Phase 07: refresh solution anchors for a specific slug.
+   * Fetches solution content from URL or official source, converts it, and rewrites
+   * the <!-- lc:solution --> and <!-- lc:solution_approach --> anchors.
    */
   async refreshSolution(
     file: TFile,
     slug: string,
     solutionUrl?: string,
   ): Promise<void> {
-    // TODO: implement solution fetching and anchor rewriting
-    // This will be implemented in Phase 06
-    new Notice('Solution refresh not yet implemented.', 3000);
+    // Determine solution source
+    let source: 'url' | 'official' = 'official';
+    let articleSlug: string | undefined;
+    let url = '';
+
+    if (solutionUrl) {
+      const parsed = parseCNSolutionUrl(solutionUrl);
+      if (!parsed) {
+        new Notice('Invalid solution URL format.', 4000);
+        return;
+      }
+      url = solutionUrl;
+      if (parsed.type === 'community') {
+        source = 'url';
+        articleSlug = parsed.articleSlug;
+      } else {
+        source = 'official';
+      }
+    }
+
+    // Fetch solution content
+    let solutionArticle: SolutionArticle | null = null;
+    if (!this.client.lcCN) {
+      new Notice('LeetCode client not initialized. Please log in via Settings.', 0);
+      return;
+    }
+    try {
+      if (source === 'official') {
+        solutionArticle = await fetchCNOfficialSolution(this.client.lcCN, slug);
+      } else if (source === 'url' && articleSlug) {
+        solutionArticle = await fetchCNCommunitySolution(this.client.lcCN, articleSlug);
+      }
+    } catch (err) {
+      if (isSessionExpired(err)) {
+        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        return;
+      }
+      new Notice(`Couldn't fetch solution. Check your connection.`, 4000);
+      return;
+    }
+
+    if (!solutionArticle) {
+      new Notice(`No solution found for ${slug}.`, 4000);
+      return;
+    }
+
+    // Convert solution content
+    const converted = convertSolution({
+      title: solutionArticle.title,
+      content: solutionArticle.content,
+    });
+
+    // Prepare anchor params
+    const params: Record<string, string> = { slug };
+    if (source === 'url') {
+      params.source = 'url';
+      params.url = url;
+    } else {
+      params.source = 'official';
+    }
+
+    // Rewrite solution and solution_approach anchors using vault.process for atomic update
+    await this.app.vault.process(file, (currentContent) => {
+      // Find the first matching solution anchor for this slug
+      const solutionAnchors = parseAnchors(currentContent).filter(
+        a => a.type === 'solution' && a.params.slug === slug
+      );
+
+      if (solutionAnchors.length === 0) {
+        new Notice(`No solution anchor found for ${slug}.`, 4000);
+        return currentContent;
+      }
+
+      // Rewrite the first solution anchor
+      let updated = currentContent;
+      updated = rewriteAnchorByParams(updated, 'solution', params, converted.code) ?? updated;
+      updated = rewriteAnchorByParams(updated, 'solution_approach', params, converted.approach) ?? updated;
+
+      return updated;
+    });
+
+    new Notice(`Updated solution for ${slug}.`, 3000);
   }
 }
 
