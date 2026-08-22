@@ -44,6 +44,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 
 | 命令 / Command | 作用 / What it does |
 |---|---|
+| `Fetch problem` | **核心入口**：粘贴题目 URL 或输入 slug → 生成完整笔记（题面 + 代码 + 空题解锚点）；笔记已存在则直接打开并按需后台刷新 / **Core entry**: paste a problem URL or type a slug → a full note is created (statement + code + empty solution anchors); existing notes are re-opened with background refresh |
 | `Log in` | 嵌入式浏览器登录 leetcode.cn / Sign in via embedded browser |
 | `Log out` | 登出并清除本地 cookie / Sign out and clear local cookies |
 | `Paste sanitize: clean and convert HTML to markdown` | 清洗选区/全文中的 LC 网页粘贴，转成干净 Markdown / Clean LC web paste-ins into Markdown |
@@ -53,17 +54,12 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 
 **Roadmap（按优先级 / in priority order）：**
 
-1. **`Fetch problem` 命令**（近期开发）：输入题目 URL 或 slug → 一键生成完整笔记（题面 + 代码 + 空题解锚点）。当前生成笔记的核心管道（`NoteWriter.openProblem`）已实现并有测试覆盖，缺的只是命令入口——完成后即可通过命令面板从零建题。
-2. **题目浏览器**：搜索 + 难度/标签筛选 + 点选建题的浏览界面（`QuickProblemSearchModal` / `FilterModal` 已实现并有测试，待接线与交互打磨）。
-3. **上架准备**：补充截图、发布 GitHub release、向 `obsidianmd/obsidian-releases` 提交社区商店 PR。
+1. **题目浏览器**：搜索 + 难度/标签筛选 + 点选建题的浏览界面（`QuickProblemSearchModal` / `FilterModal` 已实现并有测试，待接线与交互打磨）。
+2. **上架准备**：补充截图、发布 GitHub release、向 `obsidianmd/obsidian-releases` 提交社区商店 PR。
 
 v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
-**Current state:** the six commands above are available today. The `Fetch problem` command (create a full note from a problem URL/slug) is the immediate next milestone — the underlying note pipeline is already implemented and tested; only the command entry point is missing. The problem browser UI and store submission follow. v2 directions (not promised): AI review, contest support.
-
-> 在 `Fetch problem` 命令落地前，题解工作流命令需要笔记中已有锚点结构（见[笔记格式](#笔记格式--note-format)），可基于[笔记模板](#设置--settings)手写或改造已有笔记。
->
-> Until the `Fetch problem` command lands, the solution commands require notes that already contain the anchor structure (see [Note format](#笔记格式--note-format)) — hand-write or adapt notes using the [note template](#设置--settings).
+**Current state:** the seven commands above are available today, including the `Fetch problem` core entry. The problem browser UI and store submission are next on the roadmap. v2 directions (not promised): AI review, contest support.
 
 ## 安装 / Install
 
@@ -85,12 +81,14 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
 1. **登录**：设置 → LeetCode → `Log in`，在弹出的嵌入式浏览器窗口中正常登录 leetcode.cn，插件自动捕获 session。若嵌入式窗口在你的平台上不可用，改用设置面板的 Manual cookie 输入框粘贴 `LEETCODE_SESSION` cookie。
    / **Log in**: Settings → LeetCode → `Log in`, sign in normally inside the embedded browser window. If the embedded window doesn't work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
-2. **题解工作流**：在含锚点的笔记中——
+2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）或直接输入 slug（如 `two-sum`）→ 插件抓取题面与代码，按模板生成 `{id}-{slug}.md` 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
+   / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL (any subpath works) or type a slug → the plugin fetches the statement and code, writes the `{id}-{slug}.md` note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
+3. **题解工作流**：在抓取生成的笔记中——
    - 直接运行 `刷新题解` 按范围刷新已有锚点；
    - 或写一行 `题解链接: https://leetcode.cn/problems/.../solutions/.../` 再运行 `吸收题解标记`；
    - 或运行 `输入题解 URL` 弹窗粘贴链接。
-   / **Solution workflow**: in a note with anchors — run `刷新题解` to refresh by scope; or write a `题解链接: <URL>` line and run `吸收题解标记`; or run `输入题解 URL` and paste a link.
-3. **粘贴清洗**：从 leetcode.cn 网页复制内容后，选中粘贴结果运行 `Paste sanitize`，公式、代码、图片链接会被整理成干净的 Obsidian Markdown。
+   / **Solution workflow**: in a fetched note — run `刷新题解` to refresh by scope; or write a `题解链接: <URL>` line and run `吸收题解标记`; or run `输入题解 URL` and paste a link.
+4. **粘贴清洗**：从 leetcode.cn 网页复制内容后，选中粘贴结果运行 `Paste sanitize`，公式、代码、图片链接会被整理成干净的 Obsidian Markdown。
    / **Paste sanitize**: after pasting content from the leetcode.cn website, select it and run `Paste sanitize` — formulas, code, and image links are converted into clean Obsidian Markdown.
 
 ## 笔记格式 / Note Format
@@ -105,7 +103,9 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 <!-- /lc:problem -->
 
 <!-- lc:code slug="two-sum" -->
+```python3
 class Solution: …
+```
 <!-- /lc:code -->
 
 <!-- lc:solution slug="two-sum" source="url" url="https://…" -->

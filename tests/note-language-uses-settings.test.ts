@@ -31,4 +31,24 @@ describe('NoteWriter frontmatter language (NOTE-09)', () => {
     expect(fm).toBeDefined();
     expect(fm!['lc-language']).toBe('java');
   });
+
+  it('starter code lands as a fenced block tagged with the language slug (regression)', async () => {
+    // Field-test finding 2026-08: bare starter code renders as plain
+    // paragraphs in Obsidian. pickStarterCode must fence — this locks the
+    // full creation path (openProblem → {{code}} → lc:code anchor).
+    const m = makeMockVaultApp({});
+    const client = makeMockLeetCodeClient({
+      detail: makeMockDetail(1, 'two-sum', {
+        codeSnippets: [{ lang: 'Java', langSlug: 'java', code: 'class Solution {}' }],
+      }),
+    });
+    const writer = new NoteWriter(m.app as never, client as never, makeMockSettings('java') as never);
+    await writer.openProblem('two-sum');
+    const body = m.state.contents.get('LeetCode/1-two-sum.md');
+    const codeRegion = body?.match(/<!-- lc:code[^>]*-->\n([\s\S]*?)\n<!-- \/lc:code -->/);
+    expect(codeRegion).toBeDefined();
+    expect(codeRegion![1]).toMatch(/^```java\n/);
+    expect(codeRegion![1]).toContain('class Solution {}');
+    expect(codeRegion![1]).toMatch(/\n```$/);
+  });
 });

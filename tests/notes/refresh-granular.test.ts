@@ -118,6 +118,11 @@ class Solution {}
       const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');
       expect(updated).toContain('<!-- lc:problem');
       expect(updated).toContain('<!-- lc:code');
+      // Regression (field-test finding): refreshed starter code must stay
+      // fenced — bare code renders as plain text in Obsidian.
+      const codeRegion = updated?.match(/<!-- lc:code[^>]*-->\n([\s\S]*?)\n<!-- \/lc:code -->/);
+      expect(codeRegion![1]).toMatch(/^```python3\n/);
+      expect(codeRegion![1]).toMatch(/\n```$/);
     });
   });
 

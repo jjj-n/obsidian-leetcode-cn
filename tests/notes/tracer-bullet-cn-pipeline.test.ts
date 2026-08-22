@@ -157,6 +157,11 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     expect(codeRegion).not.toBeNull();
     expect(codeRegion![1]).toContain('class Solution:');
     expect(codeRegion![1]).toContain('def twoSum');
+    // NOTE: this lower-layer test hand-crafts `starterCode` and bypasses
+    // NoteWriter.pickStarterCode, so the fence lives in the fixture, not in
+    // the render output. Creation/refresh path fencing is regression-tested
+    // in tests/note-language-uses-settings.test.ts and
+    // tests/notes/refresh-granular.test.ts.
 
     // (e) User-owned sections preserved as-is.
     expect(body).toContain('## 代码思路');

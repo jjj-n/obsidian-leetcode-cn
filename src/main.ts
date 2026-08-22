@@ -30,6 +30,7 @@ import { LeetCodeSettingTab } from './settings/SettingsTab';
 import { pasteSanitize } from './notes/PasteSanitizer';
 import { parseSolutionMarkers, findEmptySolutionAnchors, findNearestEmptySolutionAnchor, removeMarkers, updateAnchorUrl } from './notes/SolutionMarker';
 import { SolutionUrlModal } from './ui/SolutionUrlModal';
+import { FetchProblemModal } from './ui/FetchProblemModal';
 import { RefreshScopeModal, type RefreshScope } from './ui/RefreshScopeModal';
 import { parseAnchors, type AnchorRegion } from './notes/AnchorParser';
 import { logger } from './shared/logger';
@@ -79,6 +80,19 @@ export default class LeetCodePlugin extends Plugin {
       id: 'login',
       name: 'Log in',
       callback: () => { void this.auth.login(); },
+    });
+
+    // Core loop — fetch a problem (URL or slug) into a note via the
+    // NoteWriter.openProblem pipeline (re-opens existing notes, fetches and
+    // writes new ones; all failure modes surface as Notices inside it).
+    this.addCommand({
+      id: 'fetch-problem',
+      name: 'Fetch problem',
+      callback: () => {
+        new FetchProblemModal(this.app, (slug) => {
+          void this.notes.openProblem(slug);
+        }).open();
+      },
     });
 
     // Ticket #04 — paste-sanitize command.

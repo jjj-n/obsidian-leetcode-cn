@@ -1081,15 +1081,20 @@ function extractAnchorRegions(rendered: string): Array<{
 /**
  * Phase 3 Plan 07 — resolve the starter snippet for the user's default
  * language. Returns empty string when either the language is empty (user
- * cleared the setting) or the detail has no matching snippet. Empty string
- * is safe — `buildNoteBody` will emit an empty fenced block with the
- * configured langSlug tag.
+ * cleared the setting) or the detail has no matching snippet.
+ *
+ * The result is emitted as a fenced code block tagged with the langSlug so
+ * the `lc:code` anchor renders as a highlighted code block in Obsidian.
+ * ALL writers of the code anchor (note creation via the {{code}}
+ * placeholder, multi-problem add, anchor refresh) go through this single
+ * function — do not write starter code into notes unfenced elsewhere.
  */
 function pickStarterCode(entry: DetailCacheEntry, langSlug: string): string {
   if (!langSlug) return '';
   const snippets = entry.codeSnippets ?? [];
   const hit = snippets.find((s) => s.langSlug === langSlug);
-  return hit?.code ?? '';
+  if (!hit?.code) return '';
+  return `\`\`\`${langSlug}\n${hit.code.trim()}\n\`\`\``;
 }
 
 /** Map LC's detail shape into the on-disk cache entry.
