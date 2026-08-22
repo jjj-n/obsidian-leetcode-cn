@@ -10,9 +10,9 @@ import type { App } from 'obsidian';
  */
 export class SolutionUrlModal extends Modal {
   private url: string = '';
-  private onSubmit: (url: string) => void;
+  private onSubmit: (url: string) => void | Promise<void>;
 
-  constructor(app: App, onSubmit: (url: string) => void) {
+  constructor(app: App, onSubmit: (url: string) => void | Promise<void>) {
     super(app);
     this.onSubmit = onSubmit;
   }
@@ -29,7 +29,8 @@ export class SolutionUrlModal extends Modal {
       .setName('URL')
       .addText((text) =>
         text
-          .setPlaceholder('https://leetcode.cn/problems/.../solutions/.../')
+          // eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder is a URL; capitalizing the host would make it invalid
+          .setPlaceholder('粘贴题解 URL，如 https://leetcode.cn/problems/.../solutions/.../')
           .setValue(this.url)
           .onChange((value) => {
             this.url = value;
@@ -43,7 +44,7 @@ export class SolutionUrlModal extends Modal {
           .setCta()
           .onClick(() => {
             this.close();
-            this.onSubmit(this.url);
+            void this.onSubmit(this.url);
           }),
       )
       .addButton((btn) =>

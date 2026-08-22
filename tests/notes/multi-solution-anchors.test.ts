@@ -10,13 +10,15 @@ describe('Ticket 07: 多解法锚点', () => {
   let mockSettings: NoteWriterSettings;
   let noteWriter: NoteWriter;
   let mockApp: ReturnType<typeof makeMockVaultApp>;
+  let graphqlMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    graphqlMock = vi.fn();
     mockClient = {
       getProblemDetail: vi.fn(),
       lcCN: {
-        graphql: vi.fn(),
-      } as any,
+        graphql: graphqlMock,
+      } as unknown as NoteWriterClient['lcCN'],
     };
 
     mockSettings = {
@@ -54,13 +56,13 @@ lc-slug: two-sum
     mockApp = makeMockVaultApp({
       'LeetCode/1-two-sum.md': noteContent,
     });
-    noteWriter = new NoteWriter(mockApp.app as any, mockClient, mockSettings);
+    noteWriter = new NoteWriter(mockApp.app as never, mockClient, mockSettings);
   });
 
   describe('refreshSolution', () => {
     it('rejects invalid solution URL', async () => {
       const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
-      await noteWriter.refreshSolution(file as any, 'two-sum', 'invalid-url');
+      await noteWriter.refreshSolution(file as never, 'two-sum', 'invalid-url');
       // Should show notice about invalid URL
       // (we can't easily test Notice calls, but we can verify it doesn't crash)
     });
@@ -68,9 +70,9 @@ lc-slug: two-sum
     it('handles missing solution gracefully', async () => {
       const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
       // Mock graphql to return no solution
-      (mockClient.lcCN as any).graphql.mockResolvedValue({ data: { question: { solution: null } } });
+      graphqlMock.mockResolvedValue({ data: { question: { solution: null } } });
 
-      await noteWriter.refreshSolution(file as any, 'two-sum');
+      await noteWriter.refreshSolution(file as never, 'two-sum');
       // Should show notice about no solution found
     });
 
@@ -78,7 +80,7 @@ lc-slug: two-sum
       const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
 
       // Mock graphql to return a solution
-      (mockClient.lcCN as any).graphql.mockResolvedValue({
+      graphqlMock.mockResolvedValue({
         data: {
           question: {
             solution: {
@@ -89,7 +91,7 @@ lc-slug: two-sum
         },
       });
 
-      await noteWriter.refreshSolution(file as any, 'two-sum');
+      await noteWriter.refreshSolution(file as never, 'two-sum');
 
       // Verify the note was updated
       const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');

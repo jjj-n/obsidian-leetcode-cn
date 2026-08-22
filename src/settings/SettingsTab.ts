@@ -69,6 +69,11 @@ export const LANGUAGE_OPTIONS: Record<string, string> = {
 };
 
 export class LeetCodeSettingTab extends PluginSettingTab {
+  // New-placeholder row draft state. Instance fields (not locals) so they
+  // survive renderTab() re-renders while the user is typing.
+  private placeholderAddName = '';
+  private placeholderAddValue = '';
+
   constructor(app: App, private readonly plugin: LeetCodePlugin) {
     super(app, plugin);
   }
@@ -256,7 +261,7 @@ export class LeetCodeSettingTab extends PluginSettingTab {
         .setName('Image folder')
         .setDesc('Vault folder where downloaded images are stored.')
         .addText((t) => t
-          .setPlaceholder('附件/leetcode')
+          .setPlaceholder('附件/LeetCode')
           .setValue(this.plugin.lcSettings.getImageFolder())
           .onChange(async (v) => {
             await this.plugin.lcSettings.setImageFolder(v);
@@ -296,32 +301,25 @@ export class LeetCodeSettingTab extends PluginSettingTab {
     });
 
     // New-placeholder row: name + value inputs + save button.
-    // Instance props survive renderTab() re-renders during typing.
-    if (!(this as Record<string, unknown>)._placeholderAddName) {
-      (this as Record<string, unknown>)._placeholderAddName = '';
-    }
-    if (!(this as Record<string, unknown>)._placeholderAddValue) {
-      (this as Record<string, unknown>)._placeholderAddValue = '';
-    }
-    const self = this as Record<string, unknown>;
-
+    // Draft state lives in the instance fields declared above so it survives
+    // renderTab() re-renders during typing.
     new Setting(placeholderGroup)
       .setName('New placeholder')
       .addText((t) => t
-        .setPlaceholder('name (snake_case)')
-        .setValue(String(self._placeholderAddName || ''))
-        .onChange((v) => { self._placeholderAddName = v; }),
+        .setPlaceholder('Name (snake_case)')
+        .setValue(this.placeholderAddName)
+        .onChange((v) => { this.placeholderAddName = v; }),
       )
       .addText((t) => t
-        .setPlaceholder('value template')
-        .setValue(String(self._placeholderAddValue || ''))
-        .onChange((v) => { self._placeholderAddValue = v; }),
+        .setPlaceholder('Value template')
+        .setValue(this.placeholderAddValue)
+        .onChange((v) => { this.placeholderAddValue = v; }),
       )
       .addExtraButton((b) => b
         .setIcon('plus')
         .setTooltip('Add placeholder')
         .onClick(async () => {
-          const trimmed = String(self._placeholderAddName || '').trim();
+          const trimmed = this.placeholderAddName.trim();
           if (!trimmed) return;
           if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) {
             new Notice('Placeholder name must be snake_case (a-z, 0-9, _), starting with a letter.', 5000);
@@ -335,9 +333,9 @@ export class LeetCodeSettingTab extends PluginSettingTab {
             new Notice('{{' + trimmed + '}} is a built-in placeholder and cannot be overridden.', 4000);
             return;
           }
-          await this.plugin.lcSettings.setCustomPlaceholder(trimmed, String(self._placeholderAddValue || '').trim());
-          self._placeholderAddName = '';
-          self._placeholderAddValue = '';
+          await this.plugin.lcSettings.setCustomPlaceholder(trimmed, this.placeholderAddValue.trim());
+          this.placeholderAddName = '';
+          this.placeholderAddValue = '';
           this.renderTab();
         }),
       );

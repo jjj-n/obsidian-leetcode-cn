@@ -11,9 +11,9 @@ export type RefreshScope = 'single' | 'problem' | 'note';
  * Ticket 10: 三选一刷新范围
  */
 export class RefreshScopeModal extends Modal {
-  private onSubmit: (scope: RefreshScope) => void;
+  private onSubmit: (scope: RefreshScope) => void | Promise<void>;
 
-  constructor(app: App, onSubmit: (scope: RefreshScope) => void) {
+  constructor(app: App, onSubmit: (scope: RefreshScope) => void | Promise<void>) {
     super(app);
     this.onSubmit = onSubmit;
   }
@@ -28,7 +28,7 @@ export class RefreshScopeModal extends Modal {
       .addButton((btn) =>
         btn.setButtonText('选择').setCta().onClick(() => {
           this.close();
-          this.onSubmit('single');
+          void this.onSubmit('single');
         }),
       );
 
@@ -38,7 +38,7 @@ export class RefreshScopeModal extends Modal {
       .addButton((btn) =>
         btn.setButtonText('选择').setCta().onClick(() => {
           this.close();
-          this.onSubmit('problem');
+          void this.onSubmit('problem');
         }),
       );
 
@@ -48,7 +48,7 @@ export class RefreshScopeModal extends Modal {
       .addButton((btn) =>
         btn.setButtonText('选择').setCta().onClick(() => {
           this.close();
-          this.onSubmit('note');
+          void this.onSubmit('note');
         }),
       );
   }

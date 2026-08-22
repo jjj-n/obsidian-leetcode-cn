@@ -18,7 +18,7 @@
 // entirely if they don't fit the cn-only notebook model.
 
 import { Notice, Plugin } from 'obsidian';
-import type { MarkdownView } from 'obsidian';
+import type { MarkdownView, MarkdownFileInfo, TFile } from 'obsidian';
 import { SettingsStore } from './settings/SettingsStore';
 import { installRequestUrlFetcher } from './api/requestUrlFetcher';
 import { LeetCodeClient } from './api/LeetCodeClient';
@@ -30,7 +30,7 @@ import { pasteSanitize } from './notes/PasteSanitizer';
 import { parseSolutionMarkers, findEmptySolutionAnchors, findNearestEmptySolutionAnchor, removeMarkers, updateAnchorUrl } from './notes/SolutionMarker';
 import { SolutionUrlModal } from './ui/SolutionUrlModal';
 import { RefreshScopeModal, type RefreshScope } from './ui/RefreshScopeModal';
-import { parseAnchors } from './notes/AnchorParser';
+import { parseAnchors, type AnchorRegion } from './notes/AnchorParser';
 import { logger } from './shared/logger';
 
 export default class LeetCodePlugin extends Plugin {
@@ -76,14 +76,14 @@ export default class LeetCodePlugin extends Plugin {
     // Step 8 — basic commands.
     this.addCommand({
       id: 'login',
-      name: 'Log in to LeetCode CN',
+      name: 'Log in',
       callback: () => { void this.auth.login(); },
     });
 
     // Ticket #04 — paste-sanitize command.
     this.addCommand({
       id: 'paste-sanitize',
-      name: 'Paste sanitize: clean and convert HTML to Markdown',
+      name: 'Paste sanitize: clean and convert HTML to markdown',
       editorCallback: (editor, view) => {
         const sel = editor.getSelection();
         if (sel) {
@@ -116,10 +116,10 @@ export default class LeetCodePlugin extends Plugin {
 
     this.addCommand({
       id: 'logout',
-      name: 'Log out of LeetCode CN',
+      name: 'Log out',
       callback: async () => {
         await this.auth.logout();
-        new Notice('LeetCode CN: logged out.', 3000);
+        new Notice('已登出。', 3000);
       },
     });
 
@@ -128,8 +128,8 @@ export default class LeetCodePlugin extends Plugin {
     // Helper to validate file and find empty anchors
     const validateAndGetEmptyAnchors = (
       editor: { getValue(): string },
-      view: { file: any }
-    ): { file: any; emptyAnchors: any[] } | null => {
+      view: MarkdownView | MarkdownFileInfo,
+    ): { file: TFile; emptyAnchors: AnchorRegion[] } | null => {
       const file = view.file;
       if (!file) {
         new Notice('没有活动文件。', 3000);

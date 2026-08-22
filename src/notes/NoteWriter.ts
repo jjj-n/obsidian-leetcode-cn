@@ -419,7 +419,7 @@ export class NoteWriter {
         : undefined;
       if (isSessionExpired(err) || isSessionExpired(maybeResp)) {
         // D-21: session expired — prompt user to re-login via settings.
-        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        new Notice('LeetCode session expired. Please log in again via settings.', 0);
         return;
       }
       // Generic network failure (D-13): Notice + abort, no partial file.
@@ -670,7 +670,7 @@ export class NoteWriter {
         : undefined;
       if (isSessionExpired(err) || isSessionExpired(maybeResp)) {
         // D-21: session expired — prompt user to re-login via settings.
-        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        new Notice('LeetCode session expired. Please log in again via settings.', 0);
         return;
       }
       const displayTitle = cached?.title ?? slug;
@@ -738,7 +738,7 @@ export class NoteWriter {
       detail = await this.client.getProblemDetail(slug);
     } catch (err) {
       if (isSessionExpired(err)) {
-        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        new Notice('LeetCode session expired. Please log in again via settings.', 0);
         return;
       }
       new Notice(`Couldn't fetch ${slug}. Check your connection.`, 4000);
@@ -833,7 +833,7 @@ export class NoteWriter {
     // Fetch solution content
     let solutionArticle: SolutionArticle | null = null;
     if (!this.client.lcCN) {
-      new Notice('LeetCode client not initialized. Please log in again via Settings.', 0);
+      new Notice('LeetCode client not initialized. Please log in again via settings.', 0);
       return;
     }
     try {
@@ -844,7 +844,7 @@ export class NoteWriter {
       }
     } catch (err) {
       if (isSessionExpired(err)) {
-        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        new Notice('LeetCode session expired. Please log in again via settings.', 0);
         return;
       }
       new Notice(`Couldn't fetch solution. Check your connection.`, 4000);
@@ -1007,7 +1007,7 @@ export class NoteWriter {
       }
     } catch (err) {
       if (isSessionExpired(err)) {
-        new Notice('LeetCode session expired. Please log in again via Settings.', 0);
+        new Notice('LeetCode session expired. Please log in again via settings.', 0);
       } else {
         logger.debug('refreshAnchorInRange: failed', err);
         new Notice('刷新失败，保留原内容。', 4000);

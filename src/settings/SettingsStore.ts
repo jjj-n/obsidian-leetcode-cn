@@ -7,16 +7,32 @@ import type { AuthCookies } from '../auth/types';
 import type { IndexedProblem, ProblemIndex } from '../browse/types';
 import { logger } from '../shared/logger';
 
-// Stub types for backward compat — AI provider and contest features were
-// removed in the cn fork (workflow A). The fields using these types are
-// preserved in PluginData for backward-compatible data.json loading, but
-// are not actively used. These stubs will be cleaned up in a future commit.
-// Using `any` liberally to avoid cascading type errors at call sites.
+// AI provider and contest features were removed in the cn fork (workflow A),
+// but the fields using these types are preserved in PluginData for
+// backward-compatible data.json loading. Provider shapes are fully typed —
+// the sanitize guards below enforce exactly these fields on load.
 export type AIProvider = 'anthropic' | 'openai' | 'openrouter' | 'ollama' | 'custom' | 'bedrock';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ProviderConfig = Record<string, any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BedrockProviderConfig = Record<string, any>;
+
+export interface ProviderConfig {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  disclosureAcknowledged: boolean;
+}
+
+export type BedrockAuthMethod = 'default-chain' | 'access-keys' | 'sso-profile' | 'api-key';
+
+export interface BedrockProviderConfig extends ProviderConfig {
+  region: string;
+  modelId: string;
+  authMethod: BedrockAuthMethod;
+  accessKeyId: string;
+  secretAccessKey: string;
+  ssoProfile: string;
+  bedrockApiKey: string;
+  sessionToken: string;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AICostLedger = Record<string, any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -542,6 +558,11 @@ function isValidProviderId(v: unknown): v is AIProvider {
   return typeof v === 'string' && VALID_AI_PROVIDERS.has(v as AIProvider);
 }
 
+/** Narrow an unknown JSON value to string; undefined for anything else. */
+function asString(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined;
+}
+
 /** Per-field shape-guard for ProviderConfig. `defaults` is the per-provider
  *  default config so each malformed field falls back to the right baseline
  *  (e.g. http://localhost for ollama, https://api.anthropic.com/v1 for
@@ -556,14 +577,12 @@ function sanitizeProviderConfig(
   // baseUrl: must match http(s):// — admits Ollama's http://localhost path
   // alongside https:// for cloud providers. Anything else (ftp://, mailto:,
   // empty string) falls through to the per-provider default.
-  const baseUrl =
-    typeof r.baseUrl === 'string' && /^https?:\/\//.test(r.baseUrl)
-      ? r.baseUrl
-      : defaults.baseUrl;
+  const baseUrlRaw = asString(r.baseUrl) ?? '';
+  const modelRaw = asString(r.model);
   return {
-    apiKey: typeof r.apiKey === 'string' ? r.apiKey : '',
-    baseUrl,
-    model: typeof r.model === 'string' && r.model.length > 0 ? r.model : defaults.model,
+    apiKey: asString(r.apiKey) ?? '',
+    baseUrl: /^https?:\/\//.test(baseUrlRaw) ? baseUrlRaw : defaults.baseUrl,
+    model: modelRaw !== undefined && modelRaw.length > 0 ? modelRaw : defaults.model,
     // Strict-true only (mirrors `legacyBaseNoticeShown` at load): the boolean
     // must be literally `true`; 'yes', 1, truthy strings, etc. all collapse
     // to false so a corrupt data.json cannot silently flip a user past the
@@ -590,27 +609,27 @@ function sanitizeBedrockProviderConfig(
 ): BedrockProviderConfig {
   if (!raw || typeof raw !== 'object') return { ...defaults };
   const r = raw as Partial<Record<keyof BedrockProviderConfig, unknown>>;
-  const authMethodRaw = r.authMethod;
+  const authMethodRaw = asString(r.authMethod);
   const authMethod: BedrockProviderConfig['authMethod'] =
-    typeof authMethodRaw === 'string' &&
+    authMethodRaw !== undefined &&
     VALID_BEDROCK_AUTH_METHODS.has(authMethodRaw as BedrockProviderConfig['authMethod'])
       ? (authMethodRaw as BedrockProviderConfig['authMethod'])
       : defaults.authMethod;
+  const regionRaw = asString(r.region);
+  const modelIdRaw = asString(r.modelId);
   return {
     // Inherited ProviderConfig fields — kept loose-typed (apiKey/baseUrl/model
     // are unused by the bedrock adapter; we still preserve whatever the user
     // had to keep round-tripping byte-clean).
-    apiKey: typeof r.apiKey === 'string' ? r.apiKey : '',
-    baseUrl: typeof r.baseUrl === 'string' ? r.baseUrl : '',
-    model: typeof r.model === 'string' ? r.model : '',
+    apiKey: asString(r.apiKey) ?? '',
+    baseUrl: asString(r.baseUrl) ?? '',
+    model: asString(r.model) ?? '',
     // Strict-true only — corrupt data.json cannot silently flip past the
     // disclosure gate (T-07-05 mirrors).
     disclosureAcknowledged: r.disclosureAcknowledged === true,
     // Bedrock-only fields.
-    region:
-      typeof r.region === 'string' && r.region.length > 0 ? r.region : defaults.region,
-    modelId:
-      typeof r.modelId === 'string' && r.modelId.length > 0 ? r.modelId : defaults.modelId,
+    region: regionRaw !== undefined && regionRaw.length > 0 ? regionRaw : defaults.region,
+    modelId: modelIdRaw !== undefined && modelIdRaw.length > 0 ? modelIdRaw : defaults.modelId,
     authMethod,
     // All 4 secret fields preserved verbatim regardless of authMethod
     // (Pitfall 10 — mode switch must not clear inactive-mode secrets).

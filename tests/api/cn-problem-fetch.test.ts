@@ -4,7 +4,6 @@
 // and prefers translatedContent over content.
 import { describe, it, expect, vi } from 'vitest';
 import { fetchCNProblemDetail } from '../../src/api/LeetCodeCNAdapter';
-import type { LeetCodeProblemDetail } from '../../src/api/LeetCodeClient';
 
 // Minimal stub of LeetCodeCN.graphql() — we only need the method shape.
 interface GraphQLResult {

@@ -1,7 +1,7 @@
 // src/notes/AnchorRewriter.ts
 // Ticket 06 & 08: Rewrite content within anchor regions in a note body.
 
-import { parseAnchors, replaceAnchorContent, type AnchorRegion } from './AnchorParser';
+import { parseAnchors, replaceAnchorContent } from './AnchorParser';
 
 /**
  * Rewrite the content of a single anchor region identified by type + params.

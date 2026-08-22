@@ -24,7 +24,6 @@ export interface AnchorRegion {
 export function parseAnchors(body: string): AnchorRegion[] {
   const anchors: AnchorRegion[] = [];
   const openPattern = /<!--\s*lc:(\w+)([^>]*?)-->/g;
-  const closePattern = /<!--\s*\/lc:(\w+)\s*-->/g;
 
   let openMatch;
   while ((openMatch = openPattern.exec(body)) !== null) {
