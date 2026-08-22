@@ -2,167 +2,142 @@
 
 > **致谢 / Acknowledgment**
 >
-> 本插件 fork 自 [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode)，扩展支持 leetcode.cn。核心基础设施（widget 同步、HTTP 节流、模板渲染等）来自上游项目，按 MIT 许可证保留原始版权声明。
+> 本插件 fork 自 [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode)，扩展支持 leetcode.cn，按 MIT 许可证保留原始版权声明。
 >
-> This plugin is a fork of [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode), extended to support leetcode.cn. Core infrastructure (widget/sync, HTTP throttling, template rendering, etc.) is from the upstream project, with original copyright retained under the MIT license.
+> This plugin is a fork of [LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode), extended for leetcode.cn, with the original copyright retained under the MIT license.
 
----
+把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中——数学公式、代码、图片格式全部保留。每道刷过的题都成为 vault 里可搜索、可链接、可离线阅读的一等笔记。
 
-把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中——数学公式、代码、图片格式全部保留，粘贴不再坏掉。每道刷过的题都变成 Obsidian vault 里可搜索、可链接、可离线阅读的一等笔记。
+Fetch leetcode.cn problems, your AC submissions, and community solutions into your Obsidian vault — with math formulas, code blocks, and images preserved. Every solved problem becomes a first-class note: searchable, linkable, and readable offline.
 
-Fetch leetcode.cn problems, your AC submissions, and community solutions into your Obsidian vault — with math formulas, code blocks, and images preserved. Every solved problem becomes a first-class note: tagged, linked, and discoverable.
+本插件与 `leetcode.cn` 通信以抓取题目和题解，完整主机列表见[网络使用](#网络使用--network-usage)章节。/ This plugin communicates with `leetcode.cn` to fetch problems and solutions — see [Network usage](#网络使用--network-usage) for the full host list.
 
-本插件与 `leetcode.cn` 通信以抓取题目和题解。完整的主机列表见下方 [网络使用](#网络使用-network-usage) 章节。
+**工作模式（workflow A，纯笔记本模式）**：你在 leetcode.cn 网站上写题、提交，插件负责把内容抓进笔记。插件**不**在 Obsidian 内运行或提交代码。
 
-This plugin communicates with `leetcode.cn` to fetch problems and solutions. See the [Network usage](#网络使用-network-usage) section below for the full list of hosts contacted.
+**Workflow A (pure notebook mode):** you write and submit code on leetcode.cn; the plugin fetches content into notes. The plugin does **not** run or submit code inside Obsidian.
 
 ## 核心特性 / Core Features
 
-- 登录 leetcode.cn（嵌入式浏览器 + cookie 手动粘贴兜底）
-- 抓取题面（HTML → Obsidian Markdown，数学公式、上下标、代码块、图片格式全部保留）
-- 抓取你的 AC 提交代码（fallback 到题目 starter code）
-- 抓取社区题解文章（自动拆 `## 题解` 代码块 + `## 题解思路` 思路）
-- 可配置笔记模板 + 占位符（`{{problem}}` / `{{code}}` / `{{solution}}` 等）
-- 支持 8 种 LC 语言（Python, Java, C++, C, JavaScript, TypeScript, Go, Rust）
-- 多题一笔记 + 一题多解法
-- 完全灵活的 frontmatter schema（任何 Dataview 字段名都能适配）
+- 登录 leetcode.cn（嵌入式浏览器自动捕获 session，设置面板手动粘贴 cookie 兜底）
+- 抓取题面：HTML → Obsidian Markdown，数学公式、上下标、代码块、图片格式全部保留
+- 抓取你的 AC 提交代码（无提交时回退到题目 starter code）
+- 抓取社区题解文章，自动拆分为代码（`## 题解`）与思路（`## 题解思路`）
+- 笔记模板 + 13 个内置占位符（`{{problem}}` / `{{code}}` / `{{solution}}` 等）+ 自定义占位符（可引用内置占位符）
+- 支持全部 8 种 LC 语言（Python、Java、C++、C、JavaScript、TypeScript、Go、Rust）
+- 多题一笔记（锚点系统）+ 一题多解法（多个 `lc:solution` 锚点）
+- 可选图片下载到 vault，笔记完全离线可读
+- 题面缓存 7 天，过期后台自动刷新
 
-- Login to leetcode.cn (embedded browser + manual cookie paste fallback)
-- Fetch problem statements (HTML → Obsidian Markdown, math/sup/sub/code/images preserved)
-- Fetch your AC submission code (fallback to starter code)
-- Fetch community solution articles (auto-split into `## 题解` code + `## 题解思路` approach)
-- Configurable note template + placeholders (`{{problem}}` / `{{code}}` / `{{solution}}` etc.)
-- Support all 8 LC languages (Python, Java, C++, C, JS, TS, Go, Rust)
-- Multi-problem-per-note + multi-solution-per-problem
-- Fully flexible frontmatter schema (adapts to any Dataview property names)
+- Log in to leetcode.cn (embedded browser session capture + manual cookie paste fallback)
+- Fetch problem statements: HTML → Obsidian Markdown with math/sup/sub/code/images preserved
+- Fetch your AC submission code (falls back to the problem's starter code)
+- Fetch community solution articles, auto-split into code (`## 题解`) and approach (`## 题解思路`)
+- Configurable note template + 13 built-in placeholders (`{{problem}}` / `{{code}}` / `{{solution}}`, etc.) + custom placeholders that can reference built-ins
+- All 8 LC languages (Python, Java, C++, C, JavaScript, TypeScript, Go, Rust)
+- Multi-problem-per-note (anchor system) + multi-solution-per-problem (multiple `lc:solution` anchors)
+- Optional image download into the vault; notes fully readable offline
+- 7-day problem-content cache with background refresh
 
-## 上游版本说明 / Upstream Version Note
+## 当前状态与 Roadmap / Current Status & Roadmap
 
-本仓库基于上游 `LikeSundayLikeRain/obsidian-leetcode` v1.3.2 fork。由于本插件走 workflow A（纯笔记本模式，不在 Obsidian 内 Run/Submit 代码），v1.3 引入的 widget / solve / ai / contest / preview 模块已删除。
+**当前可用命令（命令面板搜索 "LeetCode"）：**
 
-This repo is forked from upstream `LikeSundayLikeRain/obsidian-leetcode` v1.3.2. Since this plugin uses workflow A (pure notebook mode — no Run/Submit inside Obsidian), the v1.3-introduced widget / solve / ai / contest / preview modules have been removed.
+| 命令 / Command | 作用 / What it does |
+|---|---|
+| `Log in` | 嵌入式浏览器登录 leetcode.cn / Sign in via embedded browser |
+| `Log out` | 登出并清除本地 cookie / Sign out and clear local cookies |
+| `Paste sanitize: clean and convert HTML to markdown` | 清洗选区/全文中的 LC 网页粘贴，转成干净 Markdown / Clean LC web paste-ins into Markdown |
+| `吸收题解标记` | 把笔记中的 `题解链接: <URL>` 行吸收进最近的空题解锚点并抓取 / Absorb `solution link: <URL>` lines into the nearest empty solution anchor and fetch |
+| `输入题解 URL` | 弹窗输入题解 URL，写入首个空锚点并抓取 / Prompt for a solution URL, fill the first empty anchor and fetch |
+| `刷新题解` | 三种范围刷新：单锚点 / 当前题全部 / 整篇笔记 / Refresh by scope: single anchor / current problem / whole note |
 
-## v1.3 — Inline widget architecture (upstream)
+**Roadmap（按优先级 / in priority order）：**
 
-**v1.3** introduces an inline widget architecture: every `leetcode-solve`
-fence renders as a self-contained CodeMirror editor inside your note, with
-edits flowing to disk via debounced `vault.process` writes. The dual-CM6
-nested editor + bidirectional sync from v1.2 has been retired. The file is
-the single source of truth; the widget writes through one mutation primitive;
-language metadata lives entirely in the `lc-language` frontmatter field.
+1. **`Fetch problem` 命令**（近期开发）：输入题目 URL 或 slug → 一键生成完整笔记（题面 + 代码 + 空题解锚点）。当前生成笔记的核心管道（`NoteWriter.openProblem`）已实现并有测试覆盖，缺的只是命令入口——完成后即可通过命令面板从零建题。
+2. **题目浏览器**：搜索 + 难度/标签筛选 + 点选建题的浏览界面（`QuickProblemSearchModal` / `FilterModal` 已实现并有测试，待接线与交互打磨）。
+3. **上架准备**：补充截图、发布 GitHub release、向 `obsidianmd/obsidian-releases` 提交社区商店 PR。
 
-### Migration from v1.0 / v1.1 / v1.2
+v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
-Existing v1.0 / v1.1 / v1.2 notes auto-migrate to the `leetcode-solve` fence
-tag the first time you open them in 1.3.x. Migration is a single atomic
-`vault.process` write — no half-migrated state ever lands on disk.
+**Current state:** the six commands above are available today. The `Fetch problem` command (create a full note from a problem URL/slug) is the immediate next milestone — the underlying note pipeline is already implemented and tested; only the command entry point is missing. The problem browser UI and store submission follow. v2 directions (not promised): AI review, contest support.
 
-- **Backup sidecar:** before each migration the original note is copied to
-  `.obsidian/plugins/obsidian-leetcode/migration-backup-{slug}-{ISO-timestamp}/`.
-- **Backup retention:** backups auto-delete after 30 days.
-- **`autoMigrateOnOpen` setting:** default ON. Toggle OFF to migrate manually
-  via the `LeetCode: Migrate this note` command palette entry.
-- **Reassurance:** your existing notes are not modified until you open them.
-  The migration is idempotent — opening an already-migrated note is a no-op.
+> 在 `Fetch problem` 命令落地前，题解工作流命令需要笔记中已有锚点结构（见[笔记格式](#笔记格式--note-format)），可基于[笔记模板](#设置--settings)手写或改造已有笔记。
+>
+> Until the `Fetch problem` command lands, the solution commands require notes that already contain the anchor structure (see [Note format](#笔记格式--note-format)) — hand-write or adapt notes using the [note template](#设置--settings).
 
-### How sync works
+## 安装 / Install
 
-The widget's editing model is one-way: widget edits are the only source of
-new content; the file is the canonical store.
+### 手动安装（商店上架前）/ Manual install (pre-store)
 
-- **Debounced writes:** widget edits write to disk via `vault.process` with
-  ~400 ms debounce by default (configurable to 300 / 500 / 1000 / 2000 ms in
-  Settings → LeetCode → Sync).
-- **External edits reload the widget:** if another pane, Obsidian Sync, or a
-  CLI tool (`git pull`, etc.) modifies the file, the widget reloads with your
-  cursor position preserved.
-- **Conflict modal:** if an external edit arrives while you are mid-keystroke,
-  a `Keep mine / Keep external / View diff` modal appears so neither side is
-  silently dropped.
+1. 从 [Releases](https://github.com/jjj-n/obsidian-leetcode-cn/releases) 下载 `main.js`、`manifest.json`、`styles.css`
+2. 放入 vault 的 `.obsidian/plugins/leetcode-cn/` 目录
+3. 设置 → 第三方插件 → 启用 `LeetCode CN`
 
-### Keyboard scoping
+1. Download `main.js`, `manifest.json`, and `styles.css` from [Releases](https://github.com/jjj-n/obsidian-leetcode-cn/releases)
+2. Copy them into `.obsidian/plugins/leetcode-cn/` inside your vault
+3. Settings → Community plugins → enable `LeetCode CN`
 
-- **Cmd-Z / Ctrl-Z (Undo):** per-widget. Pressing undo inside the widget undoes
-  widget edits; pressing it outside undoes parent-doc edits. The two undo
-  stacks are independent — typing in the widget does not pollute the parent
-  doc's undo stack and vice versa.
-- **Cmd-F / Ctrl-F (Find):** focus-scoped. Pressing find inside the widget
-  searches widget content; outside, it searches the parent doc. The active
-  search scope follows your cursor.
+### 社区商店（上架后）/ Community store (after acceptance)
 
-### Known notes
+设置 → 第三方插件 → 浏览 → 搜索 `LeetCode CN` → 安装并启用。/ Settings → Community plugins → Browse → search `LeetCode CN` → install and enable.
 
-- **Vim toggle requires reload:** toggling vim mode ON/OFF in
-  `Settings → Editor → Vim Mode` does not hot-reload the widget. Reload
-  Obsidian (Cmd-R or restart) for the new vim state to apply. The plugin's
-  internal `Compartment.reconfigure` path works for plugin-driven dispatches
-  but the user-driven Settings-panel toggle does not propagate reliably.
-  This is a known v1.3 contract.
-- **Block-id widget UX deferred to v1.4+:** standard Obsidian `^block-id`
-  syntax already works on the widget fence — appending `^id` on the line
-  after the closing fence resolves via `[[Note#^id]]`. The deferred
-  enhancement is UX polish (auto-hiding generated `^id` lines in Live Preview
-  and a one-click "Copy block ref" button); the basic linking capability is
-  available today.
+## 使用 / Usage
 
-## Features
+1. **登录**：设置 → LeetCode → `Log in`，在弹出的嵌入式浏览器窗口中正常登录 leetcode.cn，插件自动捕获 session。若嵌入式窗口在你的平台上不可用，改用设置面板的 Manual cookie 输入框粘贴 `LEETCODE_SESSION` cookie。
+   / **Log in**: Settings → LeetCode → `Log in`, sign in normally inside the embedded browser window. If the embedded window doesn't work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
+2. **题解工作流**：在含锚点的笔记中——
+   - 直接运行 `刷新题解` 按范围刷新已有锚点；
+   - 或写一行 `题解链接: https://leetcode.cn/problems/.../solutions/.../` 再运行 `吸收题解标记`；
+   - 或运行 `输入题解 URL` 弹窗粘贴链接。
+   / **Solution workflow**: in a note with anchors — run `刷新题解` to refresh by scope; or write a `题解链接: <URL>` line and run `吸收题解标记`; or run `输入题解 URL` and paste a link.
+3. **粘贴清洗**：从 leetcode.cn 网页复制内容后，选中粘贴结果运行 `Paste sanitize`，公式、代码、图片链接会被整理成干净的 Obsidian Markdown。
+   / **Paste sanitize**: after pasting content from the leetcode.cn website, select it and run `Paste sanitize` — formulas, code, and image links are converted into clean Obsidian Markdown.
 
-- Browse the LeetCode problem list with search + difficulty/status filters
-- Preview any problem in a read-only tab before committing — single-click previews by default; shift-click still opens the note directly
-- Open any problem as an Obsidian note with locked frontmatter and a `## Problem` statement rendered as Markdown
-- Write solutions in a nested code editor with full language support — syntax highlighting, auto-indent, bracket matching, and comment toggling for all 8 LC languages (Python, Java, C++, C, JavaScript, TypeScript, Go, Rust)
-- Run your code against sample or custom test cases with `LeetCode: Run`
-- Submit to LC's judge with `LeetCode: Submit`; every verdict type (AC, WA, TLE, MLE, CE, RE) is surfaced
-- On Accepted, the plugin updates frontmatter and writes `[[Technique]]` backlinks, turning your vault into a knowledge graph of solving techniques
-- Browse your past LC submissions with `LeetCode: View past submissions`
-- Vim mode support — Normal-mode keys (j/k/dd/yy/etc.) stay in the code editor, not the parent document
-- Optional relative line numbers in the code editor (plugin setting, independent of third-party plugins)
-- Previously fetched problems stay readable offline
+## 笔记格式 / Note Format
 
-## Install
+- 笔记位于可配置的题目文件夹（默认 `LeetCode/`），文件名 `{id}-{slug}.md`
+- frontmatter：`lc-slug` / `lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-language` / `lc-status` 由插件维护（每次覆写；`lc-status` 不会从已做题回退），`aliases` 与 `tags` 与用户已有条目做并集，不会丢你的手动添加
+- 内容区用 HTML 注释锚点包裹，插件按锚点精准刷新、不动锚点外的内容：
 
-### From the Obsidian community plugin store (recommended, after v0.1.0 acceptance)
+```
+<!-- lc:problem slug="two-sum" -->
+题面 Markdown…
+<!-- /lc:problem -->
 
-1. Open Obsidian → Settings → Community plugins → Browse
-2. Search for `LeetCode`
-3. Install, then Enable
+<!-- lc:code slug="two-sum" -->
+class Solution: …
+<!-- /lc:code -->
 
-### Manual install (from release assets, pre-acceptance)
+<!-- lc:solution slug="two-sum" source="url" url="https://…" -->
+## 题解思路
+…
+## 题解
+…code…
+<!-- /lc:solution -->
+```
 
-1. Download `manifest.json`, `main.js`, and `styles.css` from the latest [GitHub release](https://github.com/LikeSundayLikeRain/obsidian-leetcode/releases)
-2. Copy them into `.obsidian/plugins/leetcode/` inside your vault
-3. Open Obsidian → Settings → Community plugins → enable `LeetCode`
+- 题解锚点 `source` 支持 `url`（社区题解链接）/ `ac`（你的 AC 提交）/ `official`（官方题解）/ `starter`（题目初始代码）；同一题可以有多个 `lc:solution` 锚点（多解法），一篇笔记可以包含多道题（多题一笔记）
 
-## Usage walkthrough
+- Notes live in the configurable problems folder (default `LeetCode/`) as `{id}-{slug}.md`
+- Frontmatter: `lc-slug` / `lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-language` / `lc-status` are plugin-maintained (overwritten each pass; `lc-status` never regresses from solved), while `aliases` and `tags` are union-merged with your manual entries
+- The body uses HTML-comment anchors; the plugin refreshes inside anchors and never touches content outside them (structure as above)
+- Solution anchor `source`: `url` (community solution link) / `ac` (your AC submission) / `official` (official editorial) / `starter` (the problem's starter code); multiple `lc:solution` anchors per problem (multi-solution) and multiple problems per note are both supported
 
-1. Install and enable the plugin.
-2. Log in: Settings → LeetCode → `Log in`. An embedded window captures your `leetcode.com` session cookie after you sign in normally. If the embedded window does not work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
-3. Open the problem browser via the ribbon icon or the `LeetCode: Open problem browser` command.
+## 设置 / Settings
 
-   ![Problem browser](docs/problem-browser.png)
+设置 → LeetCode。/ Settings → LeetCode:
 
-4. Click any problem. The plugin creates a note at `{Problems folder}/{id}-{slug}.md` with the problem statement, frontmatter, and a fenced code block ready for your solution.
+- **Authentication**：登录、登出、手动粘贴 cookie 兜底 / Log in, log out, manual cookie paste fallback
+- **Notes**：题目笔记文件夹（默认 `LeetCode`）、默认语言（默认 `python3`）/ Problems folder (default `LeetCode`), default language (default `python3`)
+- **Images**：下载图片到 vault 开关 + 图片文件夹 / Download-images toggle + image folder
+- **Custom placeholders**：自定义占位符，值模板可引用内置占位符（如 `{{my_id}}` = `lc-{{id}}`）/ Custom placeholders whose value templates may reference built-ins (e.g. `{{my_id}}` = `lc-{{id}}`)
 
-   ![Problem note](docs/problem-note.png)
+> 面板中另有 `AI coach`、`Knowledge graph` 两个分区和 Notes 下的 `Click behavior` 选项——它们是已移除功能（AI 审查、Accepted 反链、题目预览）的残留界面，当前不产生任何作用，将在后续版本清理。
+>
+> The panel also shows `AI coach` and `Knowledge graph` sections plus a `Click behavior` option under Notes — remnants of removed features (AI review, Accepted backlinks, problem preview) with no effect today; they will be removed in a future release.
 
-5. Write your solution in the `## Code` block. A nested code editor activates automatically with syntax highlighting, auto-indent, and bracket matching for your selected language. `Run` and `Submit` buttons appear inline. The command palette (`LeetCode: Run`, `LeetCode: Submit`) also works.
-6. When you are ready, click `Submit`. The verdict modal shows the result, runtime, memory, and percentile:
-
-   ![Verdict — Accepted](docs/verdict-accepted.png)
-
-7. On Accepted, the plugin writes `[[Technique Name]]` wikilinks under a `## Techniques` section and creates stub technique notes. Open Obsidian's Graph view to see the knowledge graph forming:
-
-   ![Graph view](docs/graph-view.png)
-
-## Previewing problems
-
-Single-click on a problem in the LeetCode browser previews it in a new tab. Shift-click opens the note directly. The preview tab is read-only — it shows the problem statement, difficulty, and topic chips with a sticky `Start Problem` button at the top, and creates no `.md` file in your vault until you click `Start Problem` (or shift-click the row in the browser).
-
-- **Right-click** any problem in the browser and pick `Preview problem` to preview regardless of your default click behavior.
-- Run `Open in preview` from the command palette while viewing a problem note to re-open the preview tab for that problem.
-- Open Settings → Preview → Click behavior. Choose `Preview first` (default) or `Open note directly` to restore v1.0 behavior. The setting persists across reloads.
-
-Only one preview tab is open at a time — clicking another problem reuses the same tab. After you click `Start Problem`, the preview detaches itself and the new note takes focus.
+**内置占位符 / Built-in placeholders：**
+`{{slug}}` `{{title}}` `{{title_cn}}` `{{problem}}` `{{code}}` `{{solution}}` `{{solution_approach}}` `{{difficulty}}` `{{tags}}` `{{id}}` `{{url}}` `{{solved_date}}` `{{language}}`
 
 ## 网络使用 / Network usage
 
@@ -173,139 +148,69 @@ Only one preview tab is open at a time — clicking another problem reuses the s
 - `pic.leetcode-cn.com` — 题面和题解中的图片 CDN（仅在 Settings → Images 开启"下载图片到 vault"时才下载，否则保留 CDN 链接）。
 - `leetcode.cn/accounts/login/` — 嵌入式浏览器登录页（仅登录时使用）。
 
-所有 HTTP 流量通过 Obsidian 内建的 `requestUrl`，绕过 Electron CORS 限制。无遥测、无分析、无其他端点。
-
 - `leetcode.cn` — GraphQL API (`/graphql`): problem details, user AC submissions, community solution articles, official editorial.
 - `leetcode.cn` — REST API: user authentication, problem tag index.
-- `pic.leetcode-cn.com` — image CDN for problem/solution images (only downloaded when Settings → Images → "Download images to vault" is ON; otherwise CDN links are preserved).
-- `leetcode.cn/accounts/login/` — embedded browser login page (only used during login).
+- `pic.leetcode-cn.com` — image CDN for problem/solution images (only downloaded when Settings → Images → download is ON; otherwise CDN links are preserved).
+- `leetcode.cn/accounts/login/` — embedded browser login page (login only).
+
+所有 HTTP 流量通过 Obsidian 内建的 `requestUrl`，绕过 Electron CORS 限制。无遥测、无分析、无其他端点。
 
 All HTTP traffic goes through Obsidian's built-in `requestUrl`, bypassing Electron CORS restrictions. No telemetry. No analytics. No other endpoints.
 
-### 认证 / Authentication
+### 认证与隐私 / Authentication & privacy
 
-认证通过 Obsidian 嵌入式 `BrowserWindow` 完成——登录后捕获 LC session cookie。Cookie 仅存储在本地 `.obsidian/plugins/leetcode-cn/data.json` 中，除 `leetcode.cn` 外不传输到任何地方，且永不记录到日志。
+认证通过 Obsidian 嵌入式 `BrowserWindow` 完成——登录后捕获 LC session cookie。Cookie 仅存储在本地 `.obsidian/plugins/leetcode-cn/data.json`，除 `leetcode.cn` 外不传输到任何地方，且永不记录到日志。
 
-Authentication is handled via an embedded Obsidian `BrowserWindow` that captures your LC session cookie after you sign in. The cookie is stored only in `.obsidian/plugins/leetcode-cn/data.json` on your local machine, is never transmitted anywhere except `leetcode.cn`, and is never logged.
+Authentication is handled via an embedded `BrowserWindow` that captures your LC session cookie after you sign in. The cookie is stored only in `.obsidian/plugins/leetcode-cn/data.json` on your local machine, is never transmitted anywhere except `leetcode.cn`, and is never logged.
+
+## 故障排除 / Troubleshooting
+
+- `LeetCode session expired. Please log in again via settings.` — session cookie 已失效。设置 → LeetCode → 重新登录。/ Your session cookie is no longer valid — log in again via Settings → LeetCode.
+- `LeetCode is rate limiting us.` — LC 返回 429。插件会自动退避重试一次；连续遇到请等几秒再试。/ LC returned 429. The plugin auto-retries once with backoff; if you see it twice in a row, wait a few seconds.
+- `Couldn't reach LeetCode.` — 无法连接 leetcode.cn（离线、DNS、防火墙）。网络故障不自动重试。/ Your machine cannot reach leetcode.cn (offline, DNS, firewall). Network failures are not auto-retried.
+- `LeetCode is slow to respond.` — LC 超时未响应。稍后手动重试。/ LC timed out. Retry manually in a moment.
+- 题解刷新无反应 — 检查笔记中锚点结构完整（开/闭标签成对、slug 正确），详见[笔记格式](#笔记格式--note-format)。/ Solution refresh does nothing — check that your anchors are well-formed (paired open/close tags, correct slug); see [Note format](#笔记格式--note-format).
 
 ## 发布流程 / Release process
 
-维护者发布新版本步骤 / Maintainer release steps：
+维护者发布步骤 / Maintainer release steps：
 
-1. 更新 `manifest.json` 中的 `version` 字段 / Bump `version` in `manifest.json`.
-2. 更新 `versions.json`，添加 `"新版本号": "最低兼容 Obsidian 版本"` 映射 / Add `"new-version": "min-obsidian-version"` entry to `versions.json`.
-3. 运行 `npm run build` 生成 `main.js` / Run `npm run build` to produce `main.js`.
-4. 创建 GitHub release，tag 必须与 `manifest.json` 的 `version` 完全匹配 / Create a GitHub release; the tag **must** match `manifest.json`'s `version` exactly.
-5. 上传 `main.js` 和 `manifest.json` 作为 release assets / Attach `main.js` and `manifest.json` as release assets.
-6. 向 [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) 提交 PR，在 `community-plugins.json` 中添加/更新条目 / Submit a PR to [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) adding/updating the entry in `community-plugins.json`:
+1. 同步更新 `manifest.json` 的 `version` 与 `package.json`，并在 `versions.json` 添加 `"版本": "最低 Obsidian 版本"` 映射 / Bump `version` in `manifest.json` + `package.json` in lockstep, and add a `"version": "min-obsidian-version"` entry to `versions.json`.
+2. 运行 `npm run ci` 确认全绿 / Run `npm run ci` and confirm it is green.
+3. 创建 GitHub release，tag 必须与 `manifest.json` 的 `version` 完全一致 / Create a GitHub release; the tag **must** match `manifest.json`'s `version` exactly.
+4. 上传 `main.js`、`manifest.json`、`styles.css` 作为 release assets / Attach `main.js`, `manifest.json`, and `styles.css` as release assets.
+5. 向 [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) 提交 PR 更新 `community-plugins.json` / Submit a PR to [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases) updating `community-plugins.json`:
    ```json
    {
      "id": "leetcode-cn",
      "name": "LeetCode CN",
      "author": "jjj-n",
-     "description": "把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中。",
+     "description": "把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中。Fetch leetcode.cn problems, code, and solutions into Obsidian notes.",
      "repo": "jjj-n/obsidian-leetcode-cn"
    }
    ```
 
-## Configuration
+## 开发 / Development
 
-Open Settings → LeetCode. Three sections:
+```bash
+git clone https://github.com/jjj-n/obsidian-leetcode-cn
+cd obsidian-leetcode-cn
+npm install
+npm run dev    # esbuild watch → main.js
+npm test       # vitest
+npm run ci     # lint + test + build + bundle-size（提交前必须全绿 / must be green before committing）
+```
 
-- **Authentication** — log in, log out, or paste a session cookie manually as a fallback.
-- **Notes** — choose the vault folder for problem notes (default: `LeetCode`) and the default language (default: `python3`).
-- **Knowledge Graph** — override the technique-notes folder (defaults to `{Problems folder}/Techniques`) and toggle automatic technique backlinks on Accepted submissions.
+本地调试：把 `main.js`、`manifest.json`、`styles.css` 拷入 `<vault>/.obsidian/plugins/leetcode-cn/` 后重载插件。/ For local testing, copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/leetcode-cn/` and reload the plugin.
 
-### Code editor
+### 体积门禁 / Bundle size gate
 
-The plugin renders the `## Code` fence as an embedded inline-widget editor with
-syntax highlighting, auto-indent, bracket matching, and per-language comment
-toggling. The widget is the only editor surface in v1.3 — the v1.2 nested-editor
-fallback path was retired in 1.3.0. Run / Submit / Reset / Retrieve last
-submission / AI commands all continue to work via the action row mounted inside
-the widget.
-
-## Troubleshooting
-
-- `LeetCode session expired. Log in again.` — your session cookie is no longer valid. Click the `Log in` action on the Notice, or open Settings → LeetCode → `Log in`.
-- `LeetCode is rate limiting us. Try again in a moment.` — LC returned HTTP 429. The plugin auto-retries once after a short backoff; if you see this twice in a row, wait a few seconds and retry manually.
-- `Couldn't reach LeetCode. Check your connection.` — your machine cannot reach `leetcode.com` (offline, DNS issue, firewall). Plugin does not auto-retry network failures.
-- `LeetCode is slow to respond. Try again.` — LC did not answer within 10 seconds. Judge or network latency; retry manually.
-- Run/Submit buttons don't appear — verify the note has `lc-slug` in its frontmatter (only LC-problem notes show the buttons). The buttons render in both Reading mode and Edit mode (Live Preview + Source). If they still don't appear after toggling the plugin off and on, check the developer console (Cmd-Option-I) for errors.
-
-### Section Protection
-
-Problem notes (any note with an `lc-slug` frontmatter entry) make a small
-set of plugin-owned regions read-only in Edit Mode (Live Preview + Source).
-The protection is silent: typing or pasting into a protected region simply
-has no effect — there's no Notice or warning.
-
-**Protected regions** (read-only):
-
-- `## Problem` — heading and entire body (the plugin overwrites this on
-  background refresh).
-- `## Techniques` — heading line only (the plugin writes `[[Wikilinks]]`
-  underneath on Accepted submissions).
-
-**Editable regions:**
-
-- The `## Code` body — owned by the inline widget; you write your solution
-  here. The widget itself enforces the fence boundaries via
-  `EditorView.atomicRanges`, so your cursor cannot stray into the fence
-  opener / closer lines.
-- The `## Techniques` body — you can add manual `[[Wikilinks]]` here; AI-driven
-  analysis will also write here.
-- The `## Notes` body — your own notes about the problem, fully under your
-  control.
-- `## Custom Tests` (legacy section) — never protected; the plugin doesn't
-  read or write it.
-
-**Switching languages:** click the language chevron in the action row at the
-top of the widget. It rewrites the fence opener atomically (Cmd-Z reverts the
-change inside the widget's per-widget undo stack) and updates the
-`lc-language` frontmatter. The fence opener tag is `leetcode-solve` in v1.3 —
-you do not edit it directly.
-
-**Why this exists:** locking the `## Problem` body and the `## Techniques`
-heading prevents your edits from accidentally landing in regions the plugin
-is about to overwrite. v1.3 narrows protection sharply versus v1.2: fence
-opener / closer protection is no longer needed because the widget owns the
-fence range.
+生产构建 `main.js` 由 CI 门禁（`scripts/check-bundle-size.mjs`）：硬上限 1.8 MB，1.76 MB 起警告；当前约 137 KB。/ The production `main.js` is gated by CI: hard ceiling 1.8 MB, warning at 1.76 MB; currently ~137 KB.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+[MIT](LICENSE)
 
 ## Contributing
 
-Issues and pull requests welcome at [github.com/LikeSundayLikeRain/obsidian-leetcode](https://github.com/LikeSundayLikeRain/obsidian-leetcode).
-
-## Development
-
-```bash
-git clone https://github.com/LikeSundayLikeRain/obsidian-leetcode
-cd obsidian-leetcode
-npm install
-npm run dev   # esbuild watch mode → main.js
-npm test      # vitest
-```
-
-For local testing, copy `main.js`, `manifest.json`, and `styles.css` into `<your-vault>/.obsidian/plugins/leetcode/` and reload the plugin.
-
-### Bundle size
-
-The production bundle (`main.js`) is gated by CI (`scripts/check-bundle-size.mjs`).
-
-- **Hard ceiling: 1.8 MB.** PRs that push `main.js` over 1,800,000 bytes fail CI.
-- **Soft warn: 1.76 MB.** PRs that push `main.js` over 1,760,000 bytes emit a CI
-  warning so feature drift is caught well before the hard cap.
-- **Current size (v1.3):** ~1.76 MB raw. The v1.2 path deletion (~3,325 LOC
-  removed) and the v1.3 polish suite (line-number gutter port, per-mode vim
-  cursor rendering, hover-border override, action row font) net out to a
-  small +49 KB delta versus the v1.2 baseline.
-
-Run the gate locally before pushing:
-
-```bash
-npm run build && npm run check:bundle-size
-```
+Issues 与 PR 欢迎：[github.com/jjj-n/obsidian-leetcode-cn](https://github.com/jjj-n/obsidian-leetcode-cn)

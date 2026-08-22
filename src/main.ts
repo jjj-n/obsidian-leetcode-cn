@@ -4,18 +4,19 @@
 // Fork of LikeSundayLikeRain/obsidian-leetcode (MIT), adapted for leetcode.cn.
 // Workflow A (pure notebook mode): no Run/Submit inside Obsidian.
 // The plugin fetches problems + user's AC code + community 题解 and writes
-// them into Obsidian notes. See .planning/specs/cn-support-spec-final.md.
+// them into Obsidian notes. See README.md ("Current status & Roadmap").
 //
 // This is a stripped-down version of the upstream main.ts. Features removed:
 // - Inline widget (v1.3 CM6 editor) — not needed in workflow A
 // - Run/Submit/judge polling — user codes on leetcode.cn directly
-// - AI review/debug — deferred to v2
-// - Contest support — deferred to v2
-// - Knowledge graph / pattern classification — deferred to v2
-// - Problem preview view — deferred to cn implementation
+// - AI review/debug — v2 direction, not promised
+// - Contest support — v2 direction, not promised
+// - Knowledge graph / pattern classification — v2 direction, not promised
+// - Problem preview view — folded into the problem-browser roadmap item
 //
-// These will be re-added as part of cn implementation tickets, or skipped
-// entirely if they don't fit the cn-only notebook model.
+// The problem browser (src/browse/) is implemented but not wired to any
+// command yet; wiring the `Fetch problem` command (NoteWriter.openProblem)
+// is the current top roadmap item.
 
 import { Notice, Plugin } from 'obsidian';
 import type { MarkdownView, MarkdownFileInfo, TFile } from 'obsidian';
