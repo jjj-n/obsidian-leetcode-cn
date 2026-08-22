@@ -1,7 +1,7 @@
 {
 	"id": "leetcode-cn",
 	"name": "LeetCode CN",
-	"version": "1.3.2",
+  "version": "0.1.0",
 	"minAppVersion": "1.12.7",
 	"description": "把 leetcode.cn 的题目、代码、题解抓取到 Obsidian 笔记中。Fork of LikeSundayLikeRain/obsidian-leetcode. Fetch leetcode.cn problems, code, and solutions into Obsidian notes.",
 	"author": "jjj-n",
