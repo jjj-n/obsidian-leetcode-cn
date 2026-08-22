@@ -6,3 +6,4 @@ data.json
 *.log
 dist
 .scratch/cr-review-diff.txt
+PRODUCT.md
