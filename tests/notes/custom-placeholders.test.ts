@@ -10,6 +10,7 @@ const data: TemplateData = {
   title_cn: '两数之和',
   difficulty: '简单',
   tags: '数组, 哈希表',
+  tags_cn: '数组、哈希表',
   url: 'https://leetcode.cn/problems/two-sum/',
   solved_date: '2026-08-04',
   language: 'python3',

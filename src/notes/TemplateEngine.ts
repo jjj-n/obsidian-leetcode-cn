@@ -9,8 +9,12 @@ export interface TemplateData {
   id: number;
   title: string;
   title_cn: string;
+  /** Chinese difficulty label (简单/中等/困难). */
   difficulty: string;
+  /** English topic names, comma-joined (e.g. "Array, Hash Table"). */
   tags: string;
+  /** Chinese topic names, 、-joined (e.g. 数组、哈希表) — fills 分类. */
+  tags_cn: string;
   url: string;
   solved_date: string;
   language: string;
@@ -23,7 +27,7 @@ export interface TemplateData {
 /** Set of built-in placeholder names — used by SettingsTab for duplicate detection. */
 export const BUILTIN_NAMES: ReadonlySet<string> = new Set([
   'slug', 'title', 'title_cn', 'problem', 'code', 'solution',
-  'solution_approach', 'difficulty', 'tags', 'id', 'url',
+  'solution_approach', 'difficulty', 'tags', 'tags_cn', 'id', 'url',
   'solved_date', 'language',
 ]);
 
@@ -38,62 +42,97 @@ const BUILTIN_PLACEHOLDERS: Record<string, keyof TemplateData> = {
   solution_approach: 'solution_approach',
   difficulty: 'difficulty',
   tags: 'tags',
+  tags_cn: 'tags_cn',
   id: 'id',
   url: 'url',
   solved_date: 'solved_date',
   language: 'language',
 };
 
-/** Default template — matches spec §2.13.
+/** Default template — mirrors the user's hand-tuned Templater template
+ *  (vault: 01丨Templates/LeetCode Template(Java).md) so plugin-generated notes
+ *  drop straight into their existing dataview-based review workflow:
+ *    - frontmatter uses their Chinese property vocabulary (created/分类/难度/
+ *      分数/情况/时间复杂度/空间复杂度/备注) with 分类 and 难度 auto-filled
+ *    - plugin-owned internals (lc-slug/lc-language/lc-status) sit at the end
+ *    - `链接：` line under frontmatter instead of a metadata blockquote
+ *    - `## 最近刷题回顾` dataview table keyed off the #leetcode + language tags
  *  Plugin-owned regions use HTML comments (`<!-- lc:problem -->`) as anchors.
- *  `lc-language` in frontmatter is the single source of truth for code language.
- *  FIXME (region-seam): `lc-region: cn` is hardcoded; when a future .com toggle
- *  lands, this must become `{{region}}` so the rendered note reflects the
- *  actual region. Tracked for ticket 11 (store compliance) / region-seam work. */
-export const DEFAULT_TEMPLATE = `---
-lc-slug: {{slug}}
-lc-url: {{url}}
-lc-region: cn
-lc-language: {{language}}
-difficulty: {{difficulty}}
-tags: [leetcode, {{tags}}]
-solved_date: {{solved_date}}
----
-
-# {{title_cn}}
-
-> 🔗 [{{title_cn}}]({{url}}) · {{difficulty}} · 题号 {{id}}
-
-<!-- lc:problem slug="{{slug}}" -->
-{{problem}}
-<!-- /lc:problem -->
-
-## 我的代码
-
-<!-- lc:code slug="{{slug}}" -->
-{{code}}
-<!-- /lc:code -->
-
-## 代码思路
-
-（你自己写代码时的思路，插件永不修改）
-
-## 题解
-
-<!-- lc:solution slug="{{slug}}" source=url url="" -->
-{{solution}}
-<!-- /lc:solution -->
-
-## 题解思路
-
-<!-- lc:solution_approach slug="{{slug}}" source=url url="" -->
-{{solution_approach}}
-<!-- /lc:solution_approach -->
-
-## 复盘
-
-（你自己的心得，插件永不修改）
-`;
+ *  `lc-language` in frontmatter is the single source of truth for code language. */
+export const DEFAULT_TEMPLATE = [
+  '---',
+  'created: {{solved_date}}',
+  '分类: {{tags_cn}}',
+  '难度: {{difficulty}}',
+  '分数:',
+  '情况:',
+  '时间复杂度:',
+  '空间复杂度:',
+  '备注:',
+  'tags:',
+  '  - leetcode',
+  '  - {{language}}',
+  'lc-slug: {{slug}}',
+  'lc-language: {{language}}',
+  'lc-status: untouched',
+  '---',
+  '',
+  '# {{id}}. {{title_cn}}',
+  '',
+  '链接：[{{id}}. {{title_cn}} - 力扣 (LeetCode)]({{url}})',
+  '',
+  '## 题面',
+  '',
+  '<!-- lc:problem slug="{{slug}}" -->',
+  '{{problem}}',
+  '<!-- /lc:problem -->',
+  '',
+  '## 代码',
+  '',
+  '<!-- lc:code slug="{{slug}}" -->',
+  '{{code}}',
+  '<!-- /lc:code -->',
+  '',
+  '## 代码思路',
+  '',
+  '（你自己写代码时的思路，插件永不修改）',
+  '',
+  '## 题解',
+  '',
+  '<!-- lc:solution slug="{{slug}}" source=url url="" -->',
+  '{{solution}}',
+  '<!-- /lc:solution -->',
+  '',
+  '## 题解思路',
+  '',
+  '<!-- lc:solution_approach slug="{{slug}}" source=url url="" -->',
+  '{{solution_approach}}',
+  '<!-- /lc:solution_approach -->',
+  '',
+  '## 遇到的错误',
+  '',
+  '（做题时踩过的坑，插件永不修改）',
+  '',
+  '## 最近刷题回顾',
+  '```dataview',
+  'table',
+  '    分类,',
+  '    难度,',
+  '    情况,',
+  '    备注,',
+  '    choice(',
+  '        date(today) = date(created),',
+  '        "Today",',
+  '        dateformat(created, "MMMM dd, yyyy")',
+  '    ) AS "创建时间"',
+  'from #{{language}} and #leetcode and !"01丨Templates"',
+  'sort created desc',
+  'limit 10',
+  '```',
+  '',
+  '[[leetcode_home]]',
+  '',
+].join('\n');
 
 /** Render a template string by replacing {{placeholder}} tokens with values
  *  from the data model plus any user-defined custom placeholders.
@@ -147,8 +186,11 @@ export function buildTemplateData(input: {
   problemMarkdown: string;
   /** Starter code or AC-submission code. */
   starterCode: string;
-  /** Topic tags as comma-separated names. */
+  /** Topic tags as comma-separated English names. */
   tagsLabel: string;
+  /** Topic tags as 、-joined Chinese names (分类 property). Empty/omitted when
+   *  the API returned no tags — 分类 stays blank for the user to fill. */
+  tagsCnLabel?: string;
 }): TemplateData {
   const now = new Date().toISOString().slice(0, 10);
   const difficultyLabel: Record<string, string> = {
@@ -163,6 +205,7 @@ export function buildTemplateData(input: {
     title_cn: input.title_cn || input.title,
     difficulty: difficultyLabel[input.difficulty] ?? input.difficulty,
     tags: input.tagsLabel,
+    tags_cn: input.tagsCnLabel ?? '',
     url: input.url,
     solved_date: now,
     language: input.language,

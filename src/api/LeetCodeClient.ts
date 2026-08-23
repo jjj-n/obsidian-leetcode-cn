@@ -38,7 +38,9 @@ export interface LeetCodeProblemDetail {
   /** Phase 5.4 — first sample case (newline-separated values, one per line).
    *  Used as fallback for arity derivation when metaData is malformed. */
   sampleTestCase?: string;
-  topicTags?: Array<{ name: string; slug: string }>;
+  /** cn-only: `translatedName` is the Chinese label (e.g. 动态规划); .com
+   *  responses leave it undefined and callers fall back to `name`. */
+  topicTags?: Array<{ name: string; slug: string; translatedName?: string | null }>;
   codeSnippets?: Array<{ lang: string; langSlug: string; code: string }>;
   stats?: string;
 }

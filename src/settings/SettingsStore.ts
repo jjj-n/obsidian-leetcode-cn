@@ -79,10 +79,12 @@ export interface DetailCacheEntry {
    *  `[[Name]]` wikilinks in the ## Techniques section and to create stub
    *  technique notes (GRAPH-03, GRAPH-04). Optional for backward-compat with
    *  Phase 2-era cache entries (Pitfall 10): undefined = pre-Phase-4 entry;
-   *  KnowledgeGraphWriter skips the ## Techniques write when absent. */
-  topicTags?: Array<{ name: string; slug: string }>;
+   *  KnowledgeGraphWriter skips the ## Techniques write when absent.
+   *  cn-only: `translatedName` is the Chinese topic label (e.g. 动态规划),
+   *  auto-filling the 分类 frontmatter property at note creation. Undefined
+   *  on .com entries and pre-cn cache entries — callers fall back to `name`. */
+  topicTags?: Array<{ name: string; slug: string; translatedName?: string | null }>;
 }
-
 export type LeetCodeRegion = 'com' | 'cn';
 
 const VALID_REGIONS: ReadonlySet<LeetCodeRegion> = new Set<LeetCodeRegion>(['com', 'cn']);

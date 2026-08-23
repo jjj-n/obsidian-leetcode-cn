@@ -8,12 +8,12 @@
 //   - the `{id}-{slug}.md` filename pattern (buildNoteFilename)
 //   - the two-heading body layout (`## Problem` + `## Notes`) (buildNoteBody)
 //
-// Phase 2 writes exactly 7 lc-* keys + aliases + the difficulty tag. Phase 4
-// extends the tag policy to include topic tags AND writes the solve-time lc-*
-// key set (lc-solved-date, lc-language) plus flips lc-status to 'accepted' —
-// see D-04 / D-05 / D-10 for the boundary. Phase 5.3 D-01/D-02 narrowed the
-// solve-time write surface (display reads runtime/memory fresh from LC
-// GraphQL on demand).
+// Template v2 (cn): the note shape mirrors the user's hand-tuned vault
+// template — Chinese property vocabulary (created/分类/难度/分数/情况/…),
+// a 链接 line under frontmatter, and a 最近刷题回顾 dataview block. The
+// plugin writes exactly 4 lc-* keys (lc-slug, lc-status, lc-language + the
+// lc-slugs multi-problem variant); retired identity keys are deleted on
+// rewrite. applySolveTimeFrontmatter keeps the AC-time lc/{slug} tag union.
 //
 // GAP-2a closure: this module also owns the IndexedProblem.status →
 // lc-status mapping (see `mapStatusDisplay`). Callers pass the internal
@@ -23,16 +23,30 @@
 import type { App, TFile } from 'obsidian';
 import type { DetailCacheEntry } from './types';
 
-/** The 8 lc-* frontmatter keys Phase 2 writes. Ordered to match D-03 YAML. */
+/** The lc-* frontmatter keys the plugin OWNS. lc-slug/lc-slugs identify the
+ *  note for re-open + anchor refresh; lc-status tracks solve progress;
+ *  lc-language is the code-language source of truth. The identity keys the
+ *  v0.1 template used to write (lc-id/lc-title/lc-difficulty/lc-url/lc-region)
+ *  were retired when the default template moved to the user's Chinese
+ *  property vocabulary (created/分类/难度/…) — they had no production readers
+ *  and are DELETED on rewrite as part of old-note migration. */
 export const PLUGIN_LC_KEYS = [
-  'lc-id',
   'lc-slug',
   'lc-slugs',
+  'lc-status',
+  'lc-language',
+] as const;
+
+/** Retired plugin-owned keys. Deleted (not just stopped-writing) inside
+ *  applyFrontmatter so pre-retirement notes migrate to the clean shape on
+ *  their next re-open. Safe to delete unconditionally: the `lc-` namespace
+ *  is plugin-owned. */
+const RETIRED_LC_KEYS = [
+  'lc-id',
   'lc-title',
   'lc-difficulty',
   'lc-url',
-  'lc-status',
-  'lc-language',
+  'lc-region',
 ] as const;
 
 /** Canonical tag namespace prefix. All LC-derived tags begin with this. */
@@ -126,10 +140,10 @@ export interface NoteTemplateInput {
   /** Per NOTE-09: read from SettingsStore.getDefaultLanguage() at the caller site. */
   language: string;
   /**
-   * The plugin's current-pass tag set.
-   * Phase 2: `[lc/{difficulty.toLowerCase()}]` (difficulty only per D-05).
-   * Phase 4 will extend to include topic tags. Union-merge with existing tags
-   * happens INSIDE applyFrontmatter's processFrontMatter callback.
+   * The plugin's current-pass tag set — union-merged into frontmatter tags
+   * INSIDE applyFrontmatter's processFrontMatter callback. Template v2
+   * passes [] (tags come from the template: leetcode + language); solve-time
+   * writers still contribute `lc/{slug}` tags on AC.
    */
   pluginTags: string[];
   /**
@@ -235,7 +249,10 @@ export function buildFrontmatterInput(
     difficulty: detail.difficulty,
     url: detail.url,
     language: defaultLanguage,
-    pluginTags: [`${LC_TAG_PREFIX}${detail.difficulty.toLowerCase()}`],
+    // Template v2: no plugin tags by default — the note's tags come from the
+    // template (leetcode + language) and 分类/难度 carry the metadata. The
+    // union mechanism stays for solve-time writers (applySolveTimeFrontmatter).
+    pluginTags: [],
     initialStatus,
   };
   // Phase 08: if adding to multi-problem note, provide slugs array
@@ -261,13 +278,17 @@ function slugFromUrl(url: string, titleFallback: string): string {
  * the only safe shape (CONTEXT.md D-10 + RESEARCH.md Pitfall 1: processFrontMatter
  * does NOT auto-union arrays; union lives in the callback).
  *
- * Semantics (D-10):
- *   lc-* keys       → plugin OVERWRITES every pass, with ONE exception:
- *                     lc-status is NEVER downgraded from an existing non-'untouched'
- *                     value back to 'untouched' (D-04 + Phase 4 respects Phase 2
- *                     re-opens).
- *   aliases         → union of plugin entries [title, String(id)] and existing user entries
- *   tags            → union of plugin's current-pass set (input.pluginTags) and existing tags
+ * Semantics (D-10, narrowed for the cn template v2):
+ *   lc-* keys       → plugin OVERWRITES the 4 owned keys every pass, with ONE
+ *                     exception: lc-status is NEVER downgraded from an existing
+ *                     non-'untouched' value back to 'untouched' (D-04 + Phase 4
+ *                     respects Phase 2 re-opens). RETIRED keys (lc-id, lc-title,
+ *                     lc-difficulty, lc-url, lc-region) are DELETED — old-note
+ *                     migration; they duplicated what the body/分类/难度 now carry.
+ *   aliases         → NOT written anymore (the default template carries no
+ *                     aliases); existing user aliases are left untouched.
+ *   tags            → union of plugin's current-pass set (input.pluginTags —
+ *                     empty by default since the v2 template) and existing tags
  *   other user keys → untouched (callback simply doesn't mutate them)
  */
 export async function applyFrontmatter(
@@ -276,12 +297,12 @@ export async function applyFrontmatter(
   input: NoteTemplateInput,
 ): Promise<void> {
   await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-    // 1. Plugin-owned lc-* keys.
-    fm['lc-id'] = input.id;
-    fm['lc-title'] = input.title;
-    fm['lc-difficulty'] = input.difficulty;
-    fm['lc-url'] = input.url;
+    // 0. Retired identity keys — delete for old-note migration.
+    for (const key of RETIRED_LC_KEYS) {
+      delete fm[key];
+    }
 
+    // 1. Plugin-owned lc-* keys.
     // Phase 08: multi-problem-per-note support.
     // Auto-upgrade: if note has lc-slug and we're adding slugs[], convert to lc-slugs.
     if (input.slugs && input.slugs.length > 1) {
@@ -315,23 +336,15 @@ export async function applyFrontmatter(
     // else: keep existing ('accepted' or 'attempted') — never downgrade.
     fm['lc-language'] = input.language;
 
-    // 2. aliases — union-merge (D-06 + D-10). String(id) per Pitfall 9.
-    const pluginAliases = [input.title, String(input.id)];
-    const priorAliases = Array.isArray(fm.aliases)
-      ? (fm.aliases as unknown[]).map(String).filter((s) => typeof s === 'string' && s.length > 0)
-      : [];
-    const mergedAliases = Array.from(new Set<string>([...pluginAliases, ...priorAliases]));
-    fm.aliases = mergedAliases;
-
-    // 3. tags — union-merge (D-10). Plugin's current-pass set + existing tags, deduped.
+    // 2. tags — union-merge (D-10). Plugin's current-pass set + existing tags, deduped.
     const priorTags = Array.isArray(fm.tags)
       ? (fm.tags as unknown[]).filter((t): t is string => typeof t === 'string')
       : [];
     const mergedTags = Array.from(new Set<string>([...priorTags, ...input.pluginTags]));
     fm.tags = mergedTags;
 
-    // 4. Non-lc-* user keys: untouched. The callback does not mutate anything
-    //    else on fm; Obsidian preserves them verbatim.
+    // 3. Non-lc-* user keys (incl. aliases): untouched. The callback does not
+    //    mutate anything else on fm; Obsidian preserves them verbatim.
   });
 }
 

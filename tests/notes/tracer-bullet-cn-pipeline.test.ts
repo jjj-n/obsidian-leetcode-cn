@@ -8,8 +8,10 @@
 // Verifies the tracer-bullet contract: given a real cn problem fixture, the
 // pipeline produces a note with
 //   - Chinese H1 title (from translatedTitle)
-//   - complete frontmatter (lc-slug, lc-url with leetcode.cn, lc-region, lc-language,
-//     difficulty in Chinese, tags, solved_date)
+//   - the user-template frontmatter vocabulary (created, 分类 from
+//     translatedName, 难度 in Chinese, tags leetcode+language) plus the
+//     plugin internals (lc-slug, lc-language, lc-status)
+//   - a 链接 line under frontmatter and a 最近刷题回顾 dataview block
 //   - both plugin-owned anchors (`<!-- lc:problem -->`, `<!-- lc:code -->`) closed
 //   - problem HTML converted to Obsidian-compatible Markdown (examples, sup, code)
 //   - no unresolved placeholders left after render
@@ -41,7 +43,7 @@ function makeCNTwoSumResponse(): {
       difficulty: 'Easy';
       isPaidOnly: false;
       exampleTestcases: string;
-      topicTags: Array<{ name: string; slug: string }>;
+      topicTags: Array<{ name: string; slug: string; translatedName: string }>;
       codeSnippets: Array<{ lang: string; langSlug: string; code: string }>;
     };
   };
@@ -59,9 +61,10 @@ function makeCNTwoSumResponse(): {
         difficulty: 'Easy',
         isPaidOnly: false,
         exampleTestcases: '[2,7,11,15]\n9',
+        // Real cn shape: English `name` + Chinese `translatedName`.
         topicTags: [
-          { name: '数组', slug: 'array' },
-          { name: '哈希表', slug: 'hash-table' },
+          { name: 'Array', slug: 'array', translatedName: '数组' },
+          { name: 'Hash Table', slug: 'hash-table', translatedName: '哈希表' },
         ],
         codeSnippets: [
           { lang: 'Python3', langSlug: 'python3', code: 'class Solution:\n    def twoSum(self, nums: list[int], target: int) -> list[int]:' },
@@ -88,11 +91,13 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     expect(detail!.translatedTitle).toBe('两数之和');
     expect(detail!.content).toBe(FIXTURE_HTML);
 
-    // 2. Cache layer — toDetailCacheEntry propagates translatedTitle → titleCn.
+    // 2. Cache layer — toDetailCacheEntry propagates translatedTitle → titleCn
+    //    and translatedName → topicTags[].translatedName.
     const entry = toDetailCacheEntry(detail as NoteWriterDetail, 'cn');
     expect(entry.titleCn).toBe('两数之和');
     expect(entry.url).toBe('https://leetcode.cn/problems/two-sum/');
     expect(entry.difficulty).toBe('Easy');
+    expect(entry.topicTags?.[0]?.translatedName).toBe('数组');
 
     // 3. Rendering layer — HTML → Markdown.
     const problemMarkdown = htmlToMarkdown(entry.contentHtml);
@@ -100,8 +105,10 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     // sup tag → Unicode superscript (htmlToMarkdown's canonical transform).
     expect(problemMarkdown).toMatch(/10[⁴4]/);
 
-    // 4. Template data layer — difficulty Chinese, title_cn from translatedTitle.
+    // 4. Template data layer — difficulty Chinese, title_cn from translatedTitle,
+    //    tags_cn from translatedName (mirrors NoteWriter.openProblem's assembly).
     const tagNames = (entry.topicTags ?? []).map((t) => t.name).join(', ');
+    const tagNamesCn = (entry.topicTags ?? []).map((t) => t.translatedName || t.name).join('、');
     const templateData = buildTemplateData({
       slug: 'two-sum',
       id: entry.id,
@@ -113,26 +120,45 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
       problemMarkdown,
       starterCode: entry.codeSnippets?.find((s) => s.langSlug === 'python3')?.code ?? '',
       tagsLabel: tagNames,
+      tagsCnLabel: tagNamesCn,
     });
     expect(templateData.title_cn).toBe('两数之和');
     expect(templateData.difficulty).toBe('简单');
-    expect(templateData.tags).toBe('数组, 哈希表');
+    expect(templateData.tags).toBe('Array, Hash Table');
+    expect(templateData.tags_cn).toBe('数组、哈希表');
 
     // 5. Template render — final note body.
     const body = renderTemplate(DEFAULT_TEMPLATE, templateData);
 
-    // (a) Chinese H1 title, not English.
-    expect(body).toMatch(/^# 两数之和$/m);
+    // (a) Chinese H1 title with 题号 prefix, not English.
+    expect(body).toMatch(/^# 1\. 两数之和$/m);
     expect(body).not.toMatch(/^# Two Sum$/m);
 
-    // (b) Frontmatter is complete and cn-localized.
+    // (b) Frontmatter uses the user-template vocabulary + plugin internals.
+    expect(body).toMatch(/^created: \d{4}-\d{2}-\d{2}$/m);
+    expect(body).toMatch(/^分类: 数组、哈希表$/m);
+    expect(body).toMatch(/^难度: 简单$/m);
+    expect(body).toMatch(/^分数:$/m);
+    expect(body).toMatch(/^情况:$/m);
+    expect(body).toMatch(/^tags:\n {2}- leetcode\n {2}- python3$/m);
     expect(body).toMatch(/^lc-slug: two-sum$/m);
-    expect(body).toMatch(/^lc-url: https:\/\/leetcode\.cn\/problems\/two-sum\/$/m);
-    expect(body).toMatch(/^lc-region: cn$/m);
     expect(body).toMatch(/^lc-language: python3$/m);
-    expect(body).toMatch(/^difficulty: 简单$/m);
-    expect(body).toMatch(/^tags: \[leetcode, 数组, 哈希表\]$/m);
-    expect(body).toMatch(/^solved_date: \d{4}-\d{2}-\d{2}$/m);
+    expect(body).toMatch(/^lc-status: untouched$/m);
+    // Retired identity keys must not come back.
+    expect(body).not.toMatch(/^lc-url:/m);
+    expect(body).not.toMatch(/^lc-id:/m);
+    expect(body).not.toMatch(/^lc-region:/m);
+    expect(body).not.toMatch(/^difficulty:/m);
+    expect(body).not.toMatch(/^solved_date:/m);
+
+    // (b2) 链接 line right under the frontmatter (plain link, no difficulty/题号
+    //      metadata — those live in 难度/分类 now).
+    expect(body).toContain('链接：[1. 两数之和 - 力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
+
+    // (b3) 最近刷题回顾 dataview block keyed off the leetcode + language tags.
+    expect(body).toContain('## 最近刷题回顾');
+    expect(body).toContain('```dataview');
+    expect(body).toContain('from #python3 and #leetcode and !"01丨Templates"');
 
     // (c) Plugin-owned anchors properly opened AND closed (with slug parameters).
     expect(body).toContain('<!-- lc:problem slug="two-sum" -->');
@@ -166,8 +192,8 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     // (e) User-owned sections preserved as-is.
     expect(body).toContain('## 代码思路');
     expect(body).toContain('（你自己写代码时的思路，插件永不修改）');
-    expect(body).toContain('## 复盘');
-    expect(body).toContain('（你自己的心得，插件永不修改）');
+    expect(body).toContain('## 遇到的错误');
+    expect(body).toContain('（做题时踩过的坑，插件永不修改）');
 
     // (f) No unresolved placeholders leak into the final body.
     expect(body).not.toMatch(/\{\{\w+\}\}/);

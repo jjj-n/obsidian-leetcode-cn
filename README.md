@@ -94,7 +94,8 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 ## 笔记格式 / Note Format
 
 - 笔记位于可配置的题目文件夹（默认 `LeetCode/`），文件名 `{id}-{slug}.md`
-- frontmatter：`lc-slug` / `lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-language` / `lc-status` 由插件维护（每次覆写；`lc-status` 不会从已做题回退），`aliases` 与 `tags` 与用户已有条目做并集，不会丢你的手动添加
+- 默认模板对齐刷题笔记的中文属性体系：`created` / `分类`（cn 官方中文标签自动填充，如 `数组、哈希表`）/ `难度`（简单/中等/困难）/ `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言）；插件内部仅维护 `lc-slug` / `lc-language` / `lc-status` 三个字段（`lc-status` 不会从已做题回退），旧版本的 `lc-id` / `lc-url` 等身份字段在重新打开时自动清除；`tags` 与用户已有条目做并集，不会丢你的手动添加
+- 正文：frontmatter 下方是 `链接：` 行（题目直达链接），之后依次为 `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误` → `## 最近刷题回顾`（内置 dataview 表格，按 `created` 倒序列出最近 10 道，需安装 Dataview 插件）
 - 内容区用 HTML 注释锚点包裹，插件按锚点精准刷新、不动锚点外的内容：
 
 ```
@@ -119,7 +120,8 @@ class Solution: …
 - 题解锚点 `source` 支持 `url`（社区题解链接）/ `ac`（你的 AC 提交）/ `official`（官方题解）/ `starter`（题目初始代码）；同一题可以有多个 `lc:solution` 锚点（多解法），一篇笔记可以包含多道题（多题一笔记）
 
 - Notes live in the configurable problems folder (default `LeetCode/`) as `{id}-{slug}.md`
-- Frontmatter: `lc-slug` / `lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-language` / `lc-status` are plugin-maintained (overwritten each pass; `lc-status` never regresses from solved), while `aliases` and `tags` are union-merged with your manual entries
+- The default template follows a Chinese property vocabulary for practice notes: `created` / `分类` (auto-filled with official cn topic labels, e.g. `数组、哈希表`) / `难度` (简单/中等/困难) / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags` (`leetcode` + language). The plugin maintains only three internal keys — `lc-slug` / `lc-language` / `lc-status` (`lc-status` never regresses from solved); identity keys from older versions (`lc-id`, `lc-url`, …) are removed on re-open; `tags` is union-merged with your manual entries
+- Body: a `链接：` line under the frontmatter, then `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误` → `## 最近刷题回顾` (an embedded dataview table listing the 10 most recent notes by `created`; requires the Dataview plugin)
 - The body uses HTML-comment anchors; the plugin refreshes inside anchors and never touches content outside them (structure as above)
 - Solution anchor `source`: `url` (community solution link) / `ac` (your AC submission) / `official` (official editorial) / `starter` (the problem's starter code); multiple `lc:solution` anchors per problem (multi-solution) and multiple problems per note are both supported
 
@@ -137,7 +139,7 @@ class Solution: …
 > The panel also shows `AI coach` and `Knowledge graph` sections plus a `Click behavior` option under Notes — remnants of removed features (AI review, Accepted backlinks, problem preview) with no effect today; they will be removed in a future release.
 
 **内置占位符 / Built-in placeholders：**
-`{{slug}}` `{{title}}` `{{title_cn}}` `{{problem}}` `{{code}}` `{{solution}}` `{{solution_approach}}` `{{difficulty}}` `{{tags}}` `{{id}}` `{{url}}` `{{solved_date}}` `{{language}}`
+`{{slug}}` `{{title}}` `{{title_cn}}` `{{problem}}` `{{code}}` `{{solution}}` `{{solution_approach}}` `{{difficulty}}` `{{tags}}` `{{tags_cn}}` `{{id}}` `{{url}}` `{{solved_date}}` `{{language}}`
 
 ## 网络使用 / Network usage
 

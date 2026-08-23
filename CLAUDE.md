@@ -31,14 +31,14 @@
 | `src/api/` | `LeetCodeClient`（@leetnotion 封装）+ 三个 cn 适配器（题面 `LeetCodeCNAdapter` / 题解 `LeetCodeCNSolutionAdapter` / AC 提交 `LeetCodeCNSubmissionAdapter`）+ `requestUrlFetcher`（fetcher shim + 节流）+ `throttle`（429 退避重试、超时） |
 | `src/auth/` | `AuthService`（嵌入式 BrowserWindow 登录、`loginManual` 手动 cookie、登出清 cookie 分区）+ `BrowserWindowLogin` |
 | `src/browse/` | `ProblemListService` / `QuickProblemSearchModal` / `FilterModal` —— **已实现、有测试、未接任何命令**（Roadmap：题目浏览器） |
-| `src/notes/` | 核心管道。`NoteWriter`（公开方法：`openProblem` / `addProblemToNote` / `forceRefresh` / `refreshSolution` / `refreshSingleAnchor` / `refreshProblemAnchors` / `refreshAllNoteAnchors`）、`NoteTemplate`（`{id}-{slug}.md` 文件名、frontmatter、正文骨架）、`TemplateEngine`（13 个内置占位符 + 自定义占位符引用展开）、`htmlToMarkdown`（turndown 管道，确定性输出有 snapshot 测试）、`AnchorParser`/`AnchorRewriter`（锚点解析与重写）、`SolutionMarker`（`题解链接:` 标记吸收）、`ImageDownloader`、`PasteSanitizer`、`BaseFile`、`HeadingRegion` |
+| `src/notes/` | 核心管道。`NoteWriter`（公开方法：`openProblem` / `addProblemToNote` / `forceRefresh` / `refreshSolution` / `refreshSingleAnchor` / `refreshProblemAnchors` / `refreshAllNoteAnchors`）、`NoteTemplate`（`{id}-{slug}.md` 文件名、frontmatter 写入器、正文骨架）、`TemplateEngine`（14 个内置占位符 + 自定义占位符引用展开）、`htmlToMarkdown`（turndown 管道，确定性输出有 snapshot 测试）、`AnchorParser`/`AnchorRewriter`（锚点解析与重写）、`SolutionMarker`（`题解链接:` 标记吸收）、`ImageDownloader`、`PasteSanitizer`、`BaseFile`、`HeadingRegion` |
 | `src/settings/` | `SettingsStore`（`data.json` 唯一读写入口，全字段 sanitize 守卫）+ `SettingsTab` |
 | `src/ui/` | `FetchProblemModal`（核心入口 + `parseProblemSlug`）、`SolutionUrlModal` / `RefreshScopeModal`（回调类型统一 `void | Promise<void>`） |
 | `src/shared/` | `logger`（cookie 脱敏，禁止打印 LEETCODE_SESSION）、`errors`、`timers` |
 
 **锚点系统**：内容区用成对 HTML 注释包裹——`lc:problem` / `lc:code` / `lc:solution` / `lc:solution_approach`；题解 `source` 取值 `url` / `ac` / `official` / `starter`。插件只改锚点内部，锚点外内容永不触碰。支持多题一笔记与一题多解法。
 
-**笔记数据**：frontmatter 中 `lc-*` 键（slug/id/title/difficulty/url/language/status）由插件每次覆写（`lc-status` 不从非 untouched 回退），`aliases`/`tags` 与用户已有条目并集。题面详情缓存于 `data.json`，TTL 7 天（`NoteWriter.CACHE_TTL_MS`），过期后台刷新，离线可读。
+**笔记数据**：默认模板（`TemplateEngine.DEFAULT_TEMPLATE`）对齐用户的中文刷题笔记体系——frontmatter 用 `created` / `分类`（cn `topicTags.translatedName` 自动填充）/ `难度` / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言），正文含 `链接：` 行与 `## 最近刷题回顾` dataview 块。插件每次覆写的只有 `lc-slug` / `lc-language` / `lc-status`（`lc-status` 不从非 untouched 回退）；`lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-region` 为已退役键，`applyFrontmatter` 重写时删除（旧笔记迁移）；不再写 `aliases`；`tags` 与用户已有条目并集。题面详情缓存于 `data.json`，TTL 7 天（`NoteWriter.CACHE_TTL_MS`），过期后台刷新，离线可读。
 
 **当前命令**（7 条）：`fetch-problem`（核心入口：`FetchProblemModal` 解析 URL/slug → `NoteWriter.openProblem`；匿名可抓公开题目，付费题与题解需登录）、`login`、`logout`、`paste-sanitize`、`absorb-solution-markers`、`input-solution-url`、`refresh-solutions`。`parseProblemSlug`（`src/ui/FetchProblemModal.ts`）是输入解析的唯一实现，有单测覆盖。
 

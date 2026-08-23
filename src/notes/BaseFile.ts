@@ -29,14 +29,16 @@ import type { App } from 'obsidian';
  * Schema reverse-engineered (GAP-6) from an Obsidian 1.10+ UI-generated
  * `.base` file so the view actually renders. Key shape:
  *   - `filters:` lives INSIDE the view (not top-level)
- *   - Filter expression is `!note["lc-id"].isEmpty()` — self-targeting by
+ *   - Filter expression is `!note["lc-slug"].isEmpty()` — self-targeting by
  *     frontmatter presence (folder-agnostic: if the user relocates a problem
- *     note to a sub-folder it still appears in the Base view)
- *   - Table view with five columns (lc-id, lc-title, lc-difficulty, lc-status,
- *     lc-language) sorted by `lc-id` DESC (D-17 — most recently added first)
+ *     note to a sub-folder it still appears in the Base view). lc-slug is the
+ *     ONLY identity key the plugin still writes (template v2 retired lc-id).
+ *   - Table columns mirror the user's template vocabulary (分类/难度/情况 +
+ *     plugin-internal lc-status), sorted by `created` DESC (most recently
+ *     fetched first)
  *
  * The `folder` parameter is retained for API compatibility with the
- * pre-GAP-6 signature but is no longer used in the rendered YAML (the filter
+ * pre-GAP-6 signature but is not used in the rendered YAML (the filter
  * expression does not reference folder path).
  */
 export function leetcodeBaseYaml(folder: string): string {
@@ -54,16 +56,15 @@ export function leetcodeBaseYaml(folder: string): string {
     '    name: Problems',
     '    filters:',
     '      and:',
-    `        - '!note["lc-id"].isEmpty()'`,
+    `        - '!note["lc-slug"].isEmpty()'`,
     '    order:',
     '      - file.name',
-    '      - lc-id',
-    '      - lc-title',
-    '      - lc-difficulty',
+    '      - 分类',
+    '      - 难度',
+    '      - 情况',
     '      - lc-status',
-    '      - lc-language',
     '    sort:',
-    '      - property: lc-id',
+    '      - property: created',
     '        direction: DESC',
     '',
   ].join('\n');

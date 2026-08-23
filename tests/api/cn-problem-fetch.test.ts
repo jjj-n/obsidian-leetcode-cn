@@ -22,7 +22,7 @@ interface GraphQLResult {
       metaData?: string;
       sampleTestCase?: string;
       stats?: string;
-      topicTags?: Array<{ name: string; slug: string }>;
+      topicTags?: Array<{ name: string; slug: string; translatedName?: string }>;
       codeSnippets?: Array<{ lang: string; langSlug: string; code: string }>;
     } | null;
   };
@@ -75,6 +75,24 @@ describe('fetchCNProblemDetail', () => {
     expect(result!.content).toBe('<p>中文题面</p>');
   });
 
+  it('propagates topic-tag translatedName when the cn API provides it', async () => {
+    const lc = makeMockLCClient({
+      data: {
+        question: fakeCNProblem({
+          topicTags: [
+            { name: 'Array', slug: 'array', translatedName: '数组' },
+            { name: 'Hash Table', slug: 'hash-table' },
+          ],
+        }),
+      },
+    });
+    const result = await fetchCNProblemDetail(lc as never, 'two-sum');
+    expect(result!.topicTags).toEqual([
+      { name: 'Array', slug: 'array', translatedName: '数组' },
+      { name: 'Hash Table', slug: 'hash-table', translatedName: null },
+    ]);
+  });
+
   it('falls back to content when translatedContent is null', async () => {
     const lc = makeMockLCClient({
       data: { question: fakeCNProblem({ translatedContent: null }) },
@@ -121,7 +139,9 @@ describe('fetchCNProblemDetail', () => {
       metaData: '{"params":[{"name":"nums","type":"integer[]"}]}',
       sampleTestCase: '2\n7\n11\n15',
       stats: '{"acRate":"50%"}"',
-      topicTags: [{ name: 'Array', slug: 'array' }],
+      // Adapter normalizes translatedName to explicit null when the response
+      // omitted it — callers fall back to `name` on null/undefined.
+      topicTags: [{ name: 'Array', slug: 'array', translatedName: null }],
       codeSnippets: [{ lang: 'Python3', langSlug: 'python3', code: 'class Solution:' }],
     });
   });

@@ -89,7 +89,9 @@ export interface NoteWriterDetail {
   content: string | null;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   isPaidOnly: boolean;
-  topicTags?: Array<{ name: string; slug: string }>;
+  /** cn-only: `translatedName` is the Chinese topic label (e.g. 动态规划),
+   *  used to auto-fill the 分类 frontmatter property. */
+  topicTags?: Array<{ name: string; slug: string; translatedName?: string | null }>;
   exampleTestcases?: string;
   metaData?: string;
   sampleTestCase?: string;
@@ -496,6 +498,12 @@ export class NoteWriter {
     }
     const problemMarkdown = htmlToMarkdown(contentHtml);
     const tagNames = (newEntry.topicTags ?? []).map((t) => t.name).join(', ');
+    // 分类 property label — Chinese translatedName when the cn API provided
+    // it, falling back to the English name (、-joined, matching the user's
+    // hand-written vocabulary like 动态规划、记忆化搜索).
+    const tagNamesCn = (newEntry.topicTags ?? [])
+      .map((t) => t.translatedName || t.name)
+      .join('、');
     const templateData = buildTemplateData({
       slug: slug,
       id: newEntry.id,
@@ -507,6 +515,7 @@ export class NoteWriter {
       problemMarkdown,
       starterCode,
       tagsLabel: tagNames || newEntry.difficulty.toLowerCase(),
+      tagsCnLabel: tagNamesCn,
     });
     const template = this.settings.getNoteTemplate() || DEFAULT_TEMPLATE;
     const customPlaceholders = this.settings.getCustomPlaceholders();
@@ -1126,11 +1135,17 @@ export function toDetailCacheEntry(raw: NoteWriterDetail, region: 'com' | 'cn' =
       ? raw.topicTags.map((t) => String(t?.slug ?? '')).filter((s) => s.length > 0)
       : [],
     // Propagate display-name-bearing topicTags so NoteWriter.openProblem can
-    // build a Chinese `tags` label from `name`s.
+    // build the Chinese 分类 label (translatedName, falling back to name).
     topicTags: Array.isArray(raw.topicTags)
       ? raw.topicTags
           .filter((t) => t && typeof t.slug === 'string' && typeof t.name === 'string')
-          .map((t) => ({ name: t.name, slug: t.slug }))
+          .map((t) => ({
+            name: t.name,
+            slug: t.slug,
+            translatedName: typeof t.translatedName === 'string' && t.translatedName.length > 0
+              ? t.translatedName
+              : null,
+          }))
       : undefined,
     exampleTestcases: raw.exampleTestcases,
     metaData: raw.metaData,

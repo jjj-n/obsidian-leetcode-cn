@@ -10,9 +10,9 @@ describe('ensureLeetcodeBase (D-17, D-18 ship-if-missing)', () => {
     expect(m.spies.create).toHaveBeenCalledWith('LeetCode/LeetCode.base', expect.any(String));
   });
 
-  it('writes YAML that includes sort by lc-id DESC (D-17)', () => {
+  it('writes YAML that includes sort by created DESC', () => {
     const yaml = leetcodeBaseYaml('LeetCode');
-    expect(yaml).toContain('lc-id');
+    expect(yaml).toContain('property: created');
     expect(yaml).toMatch(/direction:\s*DESC/i);
   });
 
@@ -22,16 +22,20 @@ describe('ensureLeetcodeBase (D-17, D-18 ship-if-missing)', () => {
     // The filters key must live INSIDE the view (indented under `  - type: table`),
     // not at top level — the latter is the v0.1.0 broken schema.
     expect(yaml).toMatch(/views:\s*\n\s*- type: table/);
-    expect(yaml).toContain(`!note["lc-id"].isEmpty()`);
+    // Template v2: lc-slug is the only identity key — the filter keys off it.
+    expect(yaml).toContain(`!note["lc-slug"].isEmpty()`);
     // Old broken expressions must be GONE.
     expect(yaml).not.toContain('file.inFolder(');
     expect(yaml).not.toContain('lc-id != null');
   });
 
-  it('YAML references all five expected columns (lc-id, lc-title, lc-difficulty, lc-status, lc-language)', () => {
+  it('YAML references the template-v2 columns (分类, 难度, 情况, lc-status) and no retired keys', () => {
     const yaml = leetcodeBaseYaml('LeetCode');
-    for (const col of ['lc-id', 'lc-title', 'lc-difficulty', 'lc-status', 'lc-language']) {
+    for (const col of ['分类', '难度', '情况', 'lc-status']) {
       expect(yaml).toContain(col);
+    }
+    for (const retired of ['lc-id', 'lc-title', 'lc-difficulty', 'lc-language']) {
+      expect(yaml).not.toContain(retired);
     }
   });
 

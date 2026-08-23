@@ -23,7 +23,7 @@ const PROBLEM_QUERY = `
       metaData
       sampleTestCase
       stats
-      topicTags { name slug }
+      topicTags { name slug translatedName }
       codeSnippets { lang langSlug code }
     }
   }
@@ -45,7 +45,7 @@ interface ProblemQueryResponse {
       metaData?: string;
       sampleTestCase?: string;
       stats?: string;
-      topicTags?: Array<{ name: string; slug: string }>;
+      topicTags?: Array<{ name: string; slug: string; translatedName?: string | null }>;
       codeSnippets?: Array<{ lang: string; langSlug: string; code: string }>;
     } | null;
   };
@@ -78,7 +78,10 @@ export async function fetchCNProblemDetail(
     exampleTestcases: q.exampleTestcases,
     metaData: q.metaData,
     sampleTestCase: q.sampleTestCase,
-    topicTags: q.topicTags ?? [],
+    topicTags: (q.topicTags ?? []).map((t) => ({
+      ...t,
+      translatedName: t.translatedName ?? null,
+    })),
     codeSnippets: q.codeSnippets ?? [],
     stats: q.stats,
   };

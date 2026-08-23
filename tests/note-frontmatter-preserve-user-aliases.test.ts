@@ -2,31 +2,35 @@ import { describe, it, expect } from 'vitest';
 import { makeMockVaultApp } from './helpers/mock-vault';
 import { applyFrontmatter } from '../src/notes/NoteTemplate';
 
-describe('applyFrontmatter alias union (D-10, D-06)', () => {
-  it('union-merges plugin aliases with user-added aliases', async () => {
+// Template v2: the default note shape carries no aliases, so applyFrontmatter
+// stopped WRITING them. Whatever aliases the user keeps (hand-added, or plugin
+// entries from pre-v2 notes) must survive untouched.
+describe('applyFrontmatter alias preservation (template v2)', () => {
+  it('preserves user-added aliases verbatim without adding plugin entries', async () => {
     const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '' });
     m.seedFrontmatter('LeetCode/1-two-sum.md', {
-      aliases: ['Two Sum', '1', 'My Favorite Problem'],
+      aliases: ['My Favorite Problem', '首刷'],
     });
     const file = m.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md')!;
     await applyFrontmatter(m.app as never, file as never, {
       id: 1, slug: 'two-sum', title: 'Two Sum', difficulty: 'Easy',
-      url: '', language: 'python3', pluginTags: ['lc/easy'],
+      url: '', language: 'python3', pluginTags: [],
     });
     const fm = m.getFrontmatter('LeetCode/1-two-sum.md')!;
-    expect(fm.aliases).toEqual(expect.arrayContaining(['Two Sum', '1', 'My Favorite Problem']));
+    expect(fm.aliases).toEqual(['My Favorite Problem', '首刷']);
   });
 
-  it('writes lc-id as a number BUT aliases entry as string "1" (D-06 + Pitfall 9)', async () => {
+  it('does not create aliases on notes that never had them', async () => {
     const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '' });
     const file = m.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md')!;
     await applyFrontmatter(m.app as never, file as never, {
       id: 1, slug: 'two-sum', title: 'Two Sum', difficulty: 'Easy',
-      url: '', language: 'python3', pluginTags: ['lc/easy'],
+      url: '', language: 'python3', pluginTags: [],
     });
     const fm = m.getFrontmatter('LeetCode/1-two-sum.md')!;
-    expect(fm['lc-id']).toBe(1);
-    expect(fm.aliases).toContain('1');  // string, not number
-    expect(fm.aliases).not.toContain(1);
+    expect(fm.aliases).toBeUndefined();
+    // Legacy pre-v2 plugin aliases on disk are NOT deleted (deletion could
+    // eat hand-added entries; they just stop being refreshed).
+    expect(fm['lc-slug']).toBe('two-sum');
   });
 });
