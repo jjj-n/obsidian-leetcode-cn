@@ -30,27 +30,27 @@ describe('tag policy (template v2 — no plugin tags by default)', () => {
   );
 
   it('preserves template-rendered tags when pluginTags is empty', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '' });
-    m.seedFrontmatter('LeetCode/1-two-sum.md', { tags: ['leetcode', 'java'] });
-    const file = m.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md')!;
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '' });
+    m.seedFrontmatter('LeetCode/1. Two Sum.md', { tags: ['leetcode', 'java'] });
+    const file = m.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md')!;
     await applyFrontmatter(m.app as never, file as never, {
       id: 1, slug: 'two-sum', title: 'Two Sum', difficulty: 'Easy',
       url: 'https://leetcode.cn/problems/two-sum/', language: 'java',
       pluginTags: [],
     });
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md')!;
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md')!;
     expect(fm.tags).toEqual(['leetcode', 'java']);
   });
 
   it('still union-merges explicit pluginTags when a caller passes them', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '' });
-    m.seedFrontmatter('LeetCode/1-two-sum.md', { tags: ['leetcode', 'revisit'] });
-    const file = m.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md')!;
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '' });
+    m.seedFrontmatter('LeetCode/1. Two Sum.md', { tags: ['leetcode', 'revisit'] });
+    const file = m.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md')!;
     await applyFrontmatter(m.app as never, file as never, {
       id: 1, slug: 'two-sum', title: 'Two Sum', difficulty: 'Easy',
       url: '', language: 'python3', pluginTags: ['lc/easy'],
     });
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!.tags).toEqual(expect.arrayContaining(['lc/easy', 'leetcode', 'revisit']));
   });
 });

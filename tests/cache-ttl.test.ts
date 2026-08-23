@@ -25,7 +25,7 @@ function makeMockSettings(fetchedAt: number, body = '## Problem\nstatement.\n\n#
 
 describe('NoteWriter cache TTL (D-11, D-14)', () => {
   it('returns cached detail without network call when cache is fresh (< 7 days)', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\ncached.\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\ncached.\n\n## Notes\n' });
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const settings = makeMockSettings(Date.now() - 1000);
     const writer = new NoteWriter(m.app as never, client as never, settings as never);
@@ -34,7 +34,7 @@ describe('NoteWriter cache TTL (D-11, D-14)', () => {
   });
 
   it('triggers background fetch when cache is stale (>= 7 days)', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nstale.\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nstale.\n\n## Notes\n' });
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const settings = makeMockSettings(Date.now() - CACHE_TTL_MS - 1000);
     const writer = new NoteWriter(m.app as never, client as never, settings as never);

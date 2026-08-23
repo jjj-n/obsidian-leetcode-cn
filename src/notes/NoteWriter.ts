@@ -20,7 +20,8 @@
 //   D-12 silent offline (log debug only; no Notice on refresh failure)
 //   D-13 new-note fetch failure: Notice + abort, no partial file
 //   D-14 DetailCacheEntry schema (id, title, difficulty, url, contentHtml, topicSlugs, …)
-//   D-16 unpadded `{id}-{slug}.md` filename via buildNotePath
+//   D-16 display-title filenames (`{id}. {题名}.md`) via buildNotePath, with
+//        an lc-slug frontmatter fallback scan for pre-v2 `{id}-{slug}.md` notes
 //   D-18 lazy LeetCode.base ship on first problem open
 //   D-22 no mutating body writes — all body writes via vault.process;
 //        all frontmatter via processFrontMatter
@@ -291,9 +292,28 @@ export class NoteWriter {
   }
 
   /**
+   * Locate the note for `slug` by scanning the problems folder's frontmatter
+   * for `lc-slug`. Fallback for canonical-path misses: pre-title-filename
+   * notes (`{id}-{slug}.md`) and user-renamed files. Returns null when no
+   * file in the folder carries this slug.
+   */
+  private findNoteBySlug(folder: string, slug: string): TFile | null {
+    if (typeof this.app.vault.getFiles !== 'function') return null;
+    const prefix = `${folder.replace(/[\\/]+$/, '')}/`;
+    for (const f of this.app.vault.getFiles()) {
+      if (!f.path.startsWith(prefix)) continue;
+      const fm = this.app.metadataCache.getFileCache(f)?.frontmatter as
+        | Record<string, unknown>
+        | undefined;
+      if (fm?.['lc-slug'] === slug) return narrowToTFile(f);
+    }
+    return null;
+  }
+
+  /**
    * Phase 18 — tab idempotency helper. If a markdown leaf is already open
-   * for `filePath`, reveal it and return true. Otherwise return false so
-   * the caller can proceed with openLinkText.
+   * for `filePath`, reveal it and return true. Otherwise return false so the
+   * caller can proceed with openLinkText.
    */
   private revealExistingLeaf(filePath: string): boolean {
     if (typeof this.app.workspace.getLeavesOfType !== 'function') return false;
@@ -378,9 +398,12 @@ export class NoteWriter {
     const cached = this.settings.getProblemDetail(slug);
 
     // Re-open path (D-11): existing file + cached detail → reveal first, optionally background-refresh.
-    const existingPath = cached ? buildNotePath(folder, cached.id, slug) : null;
-    const existingFile = existingPath
-      ? narrowToTFile(this.app.vault.getAbstractFileByPath(existingPath))
+    // Canonical filename is title-based; the lc-slug scan is the fallback for
+    // pre-v2 `{id}-{slug}.md` notes and user-renamed files.
+    const existingFile = cached
+      ? (narrowToTFile(this.app.vault.getAbstractFileByPath(
+          buildNotePath(folder, cached.id, cached.titleCn ?? cached.title),
+        )) ?? this.findNoteBySlug(folder, slug))
       : null;
 
     if (existingFile) {
@@ -454,10 +477,10 @@ export class NoteWriter {
     // (prune, manual reset, plugin reinstall) but the note file still exists
     // on disk, we MUST retrofit rather than re-create. Otherwise
     // `vault.create` below throws ("already exists") and the user sees a
-    // broken re-open. Using the fresh detail's id, we can now compute the
-    // canonical path and retrofit silently.
-    const filePath = buildNotePath(folder, newEntry.id, slug);
-    const existingAtCanonical = narrowToTFile(this.app.vault.getAbstractFileByPath(filePath));
+    // broken re-open. The lc-slug fallback scan covers pre-v2 filenames.
+    const filePath = buildNotePath(folder, newEntry.id, newEntry.titleCn ?? newEntry.title);
+    const existingAtCanonical = narrowToTFile(this.app.vault.getAbstractFileByPath(filePath))
+      ?? this.findNoteBySlug(folder, slug);
     if (existingAtCanonical) {
       // Treat as re-open: reveal + retrofit + refresh frontmatter.
       // Phase 18: tab idempotency — reuse existing leaf if already open.
@@ -664,12 +687,14 @@ export class NoteWriter {
     const folder = this.settings.getProblemsFolder();
     const cached = this.settings.getProblemDetail(slug);
 
-    // Locate the existing note by cached id + slug. If there's no cache, we
-    // can't compute the filename — ask the user to open the problem first.
-    const existingPath = cached ? buildNotePath(folder, cached.id, slug) : null;
-    const existingFile = existingPath
-      ? narrowToTFile(this.app.vault.getAbstractFileByPath(existingPath))
-      : null;
+    // Locate the existing note by cached id + display title, falling back to
+    // the lc-slug scan (pre-v2 filenames, cleared cache). If neither finds a
+    // note, ask the user to open the problem first.
+    const existingFile = (cached
+      ? narrowToTFile(this.app.vault.getAbstractFileByPath(
+          buildNotePath(folder, cached.id, cached.titleCn ?? cached.title),
+        ))
+      : null) ?? this.findNoteBySlug(folder, slug);
 
     if (!existingFile) {
       new Notice(`No note for problem ${slug}.`, 4000);

@@ -18,7 +18,7 @@ function makeMockSettings(prewarmedCache: { fetchedAt: number; id: number; title
 
 describe('NoteWriter offline regeneration (NOTE-07)', () => {
   it('re-reveals a cached note without calling the network when cache is fresh', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nStatement.\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nStatement.\n\n## Notes\n' });
     const client = makeMockLeetCodeClient({ throwOn: 'network' });  // would throw if called
     const settings = makeMockSettings({
       fetchedAt: Date.now() - 1000,

@@ -55,21 +55,21 @@ lc-slug: two-sum
 `;
 
     mockApp = makeMockVaultApp({
-      'LeetCode/1-two-sum.md': noteContent,
+      'LeetCode/1. Two Sum.md': noteContent,
     });
     noteWriter = new NoteWriter(mockApp.app as never, mockClient, mockSettings);
   });
 
   describe('refreshSolution', () => {
     it('rejects invalid solution URL', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
       await noteWriter.refreshSolution(file as never, 'two-sum', 'invalid-url');
       // Should show notice about invalid URL
       // (we can't easily test Notice calls, but we can verify it doesn't crash)
     });
 
     it('handles missing solution gracefully', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
       // Mock graphql to return no solution
       graphqlMock.mockResolvedValue({ data: { question: { solution: null } } });
 
@@ -78,7 +78,7 @@ lc-slug: two-sum
     });
 
     it('rewrites solution anchor with official solution', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
 
       // Mock graphql to return a solution
       graphqlMock.mockResolvedValue({
@@ -95,7 +95,7 @@ lc-slug: two-sum
       await noteWriter.refreshSolution(file as never, 'two-sum');
 
       // Verify the note was updated
-      const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');
+      const updated = mockApp.state.contents.get('LeetCode/1. Two Sum.md');
       expect(updated).toContain('def solve()');
       expect(updated).toContain('解题思路');
     });

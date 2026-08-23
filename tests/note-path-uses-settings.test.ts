@@ -29,7 +29,7 @@ describe('NoteWriter path construction (NOTE-08)', () => {
     const writer = new NoteWriter(m.app as never, client as never, makeMockSettings('CustomFolder/LC') as never);
     await writer.openProblem('two-sum');
     expect(m.spies.create).toHaveBeenCalledWith(
-      'CustomFolder/LC/1-two-sum.md',
+      'CustomFolder/LC/1. Two Sum.md',
       expect.any(String),
     );
   });

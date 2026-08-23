@@ -152,9 +152,9 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     expect(body).not.toMatch(/^difficulty:/m);
     expect(body).not.toMatch(/^solved_date:/m);
 
-    // (b2) 链接 line right under the frontmatter (plain link, no difficulty/题号
-    //      metadata — those live in 难度/分类 now).
-    expect(body).toContain('链接：[1. 两数之和 - 力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
+    // (b2) 链接 line right under the frontmatter — link text only; the title
+    //      lives in the note filename (1. 两数之和.md).
+    expect(body).toContain('链接：[力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
 
     // (b3) No hardcoded per-note extras — the review table / footer is the
     //      user-owned noteFooter setting, not part of the default template.

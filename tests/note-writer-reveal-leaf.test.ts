@@ -29,7 +29,7 @@ describe('NoteWriter.openProblem reveal-leaf targeting', () => {
     const m = makeMockVaultApp({});
     // Pre-seed frontmatter on the canonical path so waitForFrontmatterIndexed
     // exits on first poll tick (avoid the ~800ms ceiling in the unit test).
-    m.seedFrontmatter('LeetCode/1-two-sum.md', { 'lc-slug': 'two-sum' });
+    m.seedFrontmatter('LeetCode/1. Two Sum.md', { 'lc-slug': 'two-sum' });
     // Active leaf is NOT a MarkdownView — branch B.
     m.spies.getActiveViewOfType.mockReturnValue(null);
     // Spy on getLeaf('tab').openFile — the helper's branch-B reveal target.
@@ -46,14 +46,14 @@ describe('NoteWriter.openProblem reveal-leaf targeting', () => {
     expect(getLeaf).toHaveBeenCalledWith('tab');
     expect(openFile).toHaveBeenCalledTimes(1);
     expect(openFile).toHaveBeenCalledWith(
-      expect.objectContaining({ path: 'LeetCode/1-two-sum.md' }),
+      expect.objectContaining({ path: 'LeetCode/1. Two Sum.md' }),
     );
     expect(m.spies.openLinkText).not.toHaveBeenCalled();
   });
 
   it('routes new-note reveal through openLinkText when a MarkdownView is active', async () => {
     const m = makeMockVaultApp({});
-    m.seedFrontmatter('LeetCode/1-two-sum.md', { 'lc-slug': 'two-sum' });
+    m.seedFrontmatter('LeetCode/1. Two Sum.md', { 'lc-slug': 'two-sum' });
     // Active leaf IS a MarkdownView (any truthy object — the helper only
     // checks truthiness; the typed return of getActiveViewOfType is the
     // real type guard in production).
@@ -68,7 +68,7 @@ describe('NoteWriter.openProblem reveal-leaf targeting', () => {
 
     await writer.openProblem('two-sum');
 
-    expect(m.spies.openLinkText).toHaveBeenCalledWith('LeetCode/1-two-sum.md', '', false);
+    expect(m.spies.openLinkText).toHaveBeenCalledWith('LeetCode/1. Two Sum.md', '', false);
     expect(getLeaf).not.toHaveBeenCalled();
     expect(openFile).not.toHaveBeenCalled();
   });

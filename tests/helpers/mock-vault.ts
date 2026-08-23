@@ -35,6 +35,12 @@ export function makeMockVaultApp(initialFiles: Record<string, string> = {}) {
   }
 
   const getAbstractFileByPath = vi.fn((p: string) => state.files.get(p) ?? null);
+  // Paths created via createFolder — vault.getFiles() must exclude them
+  // (Obsidian's getFiles returns markdown-able FILES only).
+  const folderPaths = new Set<string>();
+  const getFiles = vi.fn(() =>
+    [...state.files.values()].filter((f) => !folderPaths.has(f.path)),
+  );
   const create = vi.fn(async (p: string, data: string) => {
     if (state.files.has(p)) throw new Error(`Vault.create: ${p} already exists`);
     const name = p.split('/').pop() ?? p;
@@ -51,6 +57,7 @@ export function makeMockVaultApp(initialFiles: Record<string, string> = {}) {
     const parentPath = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '';
     const folder: MockVaultFile = { path: p, name, extension: '', parent: parentPath ? { path: parentPath } : null };
     state.files.set(p, folder);
+    folderPaths.add(p);
     return folder;
   });
   const process = vi.fn(async (file: MockVaultFile, fn: (current: string) => string) => {
@@ -101,6 +108,7 @@ export function makeMockVaultApp(initialFiles: Record<string, string> = {}) {
     app: {
       vault: {
         getAbstractFileByPath,
+        getFiles,
         create,
         createFolder,
         process,
@@ -122,7 +130,7 @@ export function makeMockVaultApp(initialFiles: Record<string, string> = {}) {
     state,
     // Convenience: expose spies at the top level for assertion ergonomics.
     spies: {
-      getAbstractFileByPath, create, createFolder, process, read, cachedRead,
+      getAbstractFileByPath, getFiles, create, createFolder, process, read, cachedRead,
       processFrontMatter, openLinkText, getActiveViewOfType, getFileCache,
       getLeaf, openFile,
     },

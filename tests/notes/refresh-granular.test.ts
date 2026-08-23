@@ -53,7 +53,7 @@ class Solution {}
 `;
 
     mockApp = makeMockVaultApp({
-      'LeetCode/1-two-sum.md': noteContent,
+      'LeetCode/1. Two Sum.md': noteContent,
     });
     noteWriter = new NoteWriter(mockApp.app as never, mockClient, mockSettings);
   });
@@ -71,7 +71,7 @@ class Solution {}
     });
 
     it('refreshes the nearest anchor to cursor', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
 
       // Mock getProblemDetail to return fresh content
       getProblemDetailMock.mockResolvedValue({
@@ -87,7 +87,7 @@ class Solution {}
 
       await noteWriter.refreshSingleAnchor(file as never, 0);
 
-      const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');
+      const updated = mockApp.state.contents.get('LeetCode/1. Two Sum.md');
       // Content should still have anchors
       expect(updated).toContain('<!-- lc:problem');
     });
@@ -95,13 +95,13 @@ class Solution {}
 
   describe('refreshProblemAnchors', () => {
     it('shows notice when slug not found', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
       await noteWriter.refreshProblemAnchors(file as never, 'nonexistent-slug');
       // Should show notice about no anchors found
     });
 
     it('refreshes all anchors for the specified slug', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
 
       getProblemDetailMock.mockResolvedValue({
         questionFrontendId: '1',
@@ -116,7 +116,7 @@ class Solution {}
 
       await noteWriter.refreshProblemAnchors(file as never, 'two-sum');
 
-      const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');
+      const updated = mockApp.state.contents.get('LeetCode/1. Two Sum.md');
       expect(updated).toContain('<!-- lc:problem');
       expect(updated).toContain('<!-- lc:code');
       // Regression (field-test finding): refreshed starter code must stay
@@ -140,7 +140,7 @@ class Solution {}
     });
 
     it('refreshes all anchors in the note', async () => {
-      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1-two-sum.md');
+      const file = mockApp.app.vault.getAbstractFileByPath('LeetCode/1. Two Sum.md');
 
       getProblemDetailMock.mockResolvedValue({
         questionFrontendId: '1',
@@ -155,7 +155,7 @@ class Solution {}
 
       await noteWriter.refreshAllNoteAnchors(file as never);
 
-      const updated = mockApp.state.contents.get('LeetCode/1-two-sum.md');
+      const updated = mockApp.state.contents.get('LeetCode/1. Two Sum.md');
       expect(updated).toContain('<!-- lc:problem');
     });
   });

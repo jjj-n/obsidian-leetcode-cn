@@ -162,15 +162,21 @@ export interface NoteTemplateInput {
   initialStatus?: LcStatus;
 }
 
-/** D-16: unpadded filename like `1-two-sum.md`, `10-regular-expression-matching.md`, `100-same-tree.md`. */
-export function buildNoteFilename(id: number, slug: string): string {
-  return `${id}-${slug}.md`;
+/**
+ * D-16 v2 (cn template): display-title filenames — `1. 两数之和.md`,
+ * `70. 爬楼梯.md`, falling back to the English title when cn has none.
+ * Vault/Windows-illegal chars (`/ \ : * ? " < > |`) become '-' and trailing
+ * dots/spaces are trimmed (Windows forbids trailing dots in names).
+ */
+export function buildNoteFilename(id: number, title: string): string {
+  const safe = title.replace(/[/\\:*?"<>|]/g, '-').replace(/[.\s]+$/, '');
+  return `${id}. ${safe}.md`;
 }
 
-/** Strip trailing slashes from the folder, join with the unpadded filename. */
-export function buildNotePath(folder: string, id: number, slug: string): string {
+/** Strip trailing slashes from the folder, join with the display-title filename. */
+export function buildNotePath(folder: string, id: number, title: string): string {
   const trimmed = folder.replace(/[\\/]+$/, '');
-  return `${trimmed}/${buildNoteFilename(id, slug)}`;
+  return `${trimmed}/${buildNoteFilename(id, title)}`;
 }
 
 /**

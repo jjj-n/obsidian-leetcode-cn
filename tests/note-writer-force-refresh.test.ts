@@ -79,7 +79,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
       'DO NOT lose this.',
       '',
     ].join('\n');
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': userBody });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': userBody });
     const settings = makeSettingsWithCache(STALE_ENTRY);
     // Fresh detail returns new HTML content — force refresh should rewrite
     // the `## Problem` section to reflect this.
@@ -101,7 +101,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
 
     // User's `## Notes` content survives; plugin's `## Problem` section was
     // replaced with the fresh HTML-converted content.
-    const newBody = m.getContent('LeetCode/1-two-sum.md') ?? '';
+    const newBody = m.getContent('LeetCode/1. Two Sum.md') ?? '';
     expect(newBody).toContain('FRESH problem statement.');
     expect(newBody).toContain('My personal solution sketch.');
     expect(newBody).toContain('DO NOT lose this.');
@@ -138,7 +138,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
 
   it('cache present but file deleted → fires Notice, no network call', async () => {
     noticeSpy.mockClear();
-    // Cache entry exists (so buildNotePath resolves to 'LeetCode/1-two-sum.md')
+    // Cache entry exists (so buildNotePath resolves to 'LeetCode/1. Two Sum.md')
     // but the vault file isn't there anymore (user deleted it).
     const m = makeMockVaultApp({}); // empty vault
     const settings = makeSettingsWithCache(STALE_ENTRY);
@@ -155,7 +155,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
   it('network failure → fires `Couldn\'t refresh` Notice, note unchanged', async () => {
     noticeSpy.mockClear();
     const originalBody = '## Problem\nkept verbatim\n\n## Notes\nUser content\n';
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': originalBody });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': originalBody });
     const settings = makeSettingsWithCache(STALE_ENTRY);
     const client = makeMockLeetCodeClient({ throwOn: 'network' });
 
@@ -170,7 +170,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
     // The title (not the slug) should appear in the Notice since cache has it.
     expect(String(matched?.[0])).toContain('Two Sum');
     // Body on disk unchanged.
-    expect(m.getContent('LeetCode/1-two-sum.md')).toBe(originalBody);
+    expect(m.getContent('LeetCode/1. Two Sum.md')).toBe(originalBody);
     // Frontmatter untouched (processFrontMatter never called on this path).
     expect(m.spies.processFrontMatter).not.toHaveBeenCalled();
   });
@@ -180,7 +180,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
     // DocumentFragment-based helper. Accept either legacy string or new
     // fragment; both carry the CF-04 copy verbatim.
     noticeSpy.mockClear();
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nold\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nold\n\n## Notes\n' });
     const settings = makeSettingsWithCache(STALE_ENTRY);
     const client = makeMockLeetCodeClient({ throwOn: 'session-expiry' });
 
@@ -202,7 +202,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
 
   it('LC returns null detail → fires `problem not found` Notice, no writes', async () => {
     noticeSpy.mockClear();
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nold\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nold\n\n## Notes\n' });
     const settings = makeSettingsWithCache(STALE_ENTRY);
     const client = makeMockLeetCodeClient({ detail: null });
 
@@ -216,7 +216,7 @@ describe('NoteWriter.forceRefresh (GAP-11)', () => {
 
   it('cache invalidation: after force refresh, fetchedAt is fresh (non-stale)', async () => {
     noticeSpy.mockClear();
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nold\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nold\n\n## Notes\n' });
     const settings = makeSettingsWithCache(STALE_ENTRY);
     const fresh = makeMockDetail(1, 'two-sum', {
       content: '<p>refreshed</p>',

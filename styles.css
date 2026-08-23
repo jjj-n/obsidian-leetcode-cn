@@ -2494,3 +2494,30 @@ button.leetcode-migration-banner__cta:hover,
   width: min(90vw, 780px) !important;
   max-width: min(90vw, 780px) !important;
 }
+
+/* ────────────────────────────────────────────────────────────────
+   Settings · 新增占位符行（cn fork）
+   该行有三个控件（名称 + 值模板 + 加号），Obsidian 默认的 Setting
+   布局会把左侧标签列挤压到不足一个汉字宽（文字竖排）。改为：
+   标签独占一行，三个控件在下一行横向铺开。
+   ──────────────────────────────────────────────────────────────── */
+.leetcode-settings .lc-placeholder-add .setting-item {
+  flex-wrap: wrap;
+}
+
+.leetcode-settings .lc-placeholder-add .setting-item-info {
+  flex: 1 0 100%;
+  margin-bottom: 0.35em;
+}
+
+.leetcode-settings .lc-placeholder-add .setting-item-control {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.5em;
+}
+
+.leetcode-settings .lc-placeholder-add .setting-item-control input[type='text'] {
+  flex: 1 1 10em;
+  min-width: 8em;
+}

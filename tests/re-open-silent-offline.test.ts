@@ -38,7 +38,7 @@ function makeStaleCacheSettings() {
 describe('NoteWriter re-open offline (D-12 silent policy)', () => {
   it('reveals the cached note and swallows the background-refresh network failure silently', async () => {
     noticeSpy.mockClear();
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nold.\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nold.\n\n## Notes\n' });
     const client = makeMockLeetCodeClient({ throwOn: 'network' });
     const writer = new NoteWriter(m.app as never, client as never, makeStaleCacheSettings() as never);
     await writer.openProblem('two-sum');

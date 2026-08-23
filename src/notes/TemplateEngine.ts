@@ -79,7 +79,7 @@ export const DEFAULT_TEMPLATE = [
   'lc-status: untouched',
   '---',
   '',
-  '链接：[{{id}}. {{title_cn}} - 力扣 (LeetCode)]({{url}})',
+  '链接：[力扣 (LeetCode)]({{url}})',
   '',
   '## 题面',
   '',

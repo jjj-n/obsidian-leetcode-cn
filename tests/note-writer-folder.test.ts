@@ -33,7 +33,7 @@ describe('NoteWriter.openProblem folder autocreate (NOTE-01)', () => {
     await writer.openProblem('two-sum');
     expect(m.spies.createFolder).toHaveBeenCalledWith('LeetCode');
     expect(m.spies.create).toHaveBeenCalledWith(
-      expect.stringMatching(/^LeetCode\/1-two-sum\.md$/),
+      expect.stringMatching(/^LeetCode\/1\. Two Sum\.md$/),
       expect.any(String),
     );
   });

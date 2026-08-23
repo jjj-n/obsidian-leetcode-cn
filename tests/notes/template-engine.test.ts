@@ -129,7 +129,7 @@ describe('DEFAULT_TEMPLATE', () => {
     expect(result).toContain('lc-slug: two-sum');
     expect(result).toContain('lc-language: python3');
     expect(result).toContain('难度: 简单');
-    expect(result).toContain('链接：[1. 两数之和 - 力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
+    expect(result).toContain('链接：[力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
     // Anchors now include slug parameters
     expect(result).toContain('<!-- lc:problem slug="two-sum" -->');
     expect(result).toContain('<!-- /lc:problem -->');

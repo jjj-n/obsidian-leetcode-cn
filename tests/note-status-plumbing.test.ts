@@ -74,7 +74,7 @@ describe('NoteWriter.openProblem status plumbing (GAP-2a, NOTE-03, D-04)', () =>
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const writer = new NoteWriter(m.app as never, client as never, makeEmptySettings() as never);
     await writer.openProblem('two-sum', 'solved');
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!['lc-status']).toBe('accepted');
   });
 
@@ -83,7 +83,7 @@ describe('NoteWriter.openProblem status plumbing (GAP-2a, NOTE-03, D-04)', () =>
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const writer = new NoteWriter(m.app as never, client as never, makeEmptySettings() as never);
     await writer.openProblem('two-sum', 'attempted');
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!['lc-status']).toBe('attempted');
   });
 
@@ -92,7 +92,7 @@ describe('NoteWriter.openProblem status plumbing (GAP-2a, NOTE-03, D-04)', () =>
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const writer = new NoteWriter(m.app as never, client as never, makeEmptySettings() as never);
     await writer.openProblem('two-sum', 'untouched');
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!['lc-status']).toBe('untouched');
   });
 
@@ -101,14 +101,14 @@ describe('NoteWriter.openProblem status plumbing (GAP-2a, NOTE-03, D-04)', () =>
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const writer = new NoteWriter(m.app as never, client as never, makeEmptySettings() as never);
     await writer.openProblem('two-sum');
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!['lc-status']).toBe('untouched');
   });
 
   it('D-04 end-to-end: background-refresh on a stale cache MUST NOT downgrade an existing lc-status: accepted', async () => {
-    const m = makeMockVaultApp({ 'LeetCode/1-two-sum.md': '## Problem\nold.\n\n## Notes\n' });
+    const m = makeMockVaultApp({ 'LeetCode/1. Two Sum.md': '## Problem\nold.\n\n## Notes\n' });
     // Seed the existing note with lc-status: accepted (Phase 4 wrote this previously).
-    m.seedFrontmatter('LeetCode/1-two-sum.md', { 'lc-status': 'accepted' });
+    m.seedFrontmatter('LeetCode/1. Two Sum.md', { 'lc-status': 'accepted' });
     const client = makeMockLeetCodeClient({ detail: makeMockDetail(1, 'two-sum') });
     const writer = new NoteWriter(m.app as never, client as never, makeStaleCacheSettings('accepted') as never);
 
@@ -121,7 +121,7 @@ describe('NoteWriter.openProblem status plumbing (GAP-2a, NOTE-03, D-04)', () =>
      
     await new Promise((r) => window.setTimeout(r, 20));
 
-    const fm = m.getFrontmatter('LeetCode/1-two-sum.md');
+    const fm = m.getFrontmatter('LeetCode/1. Two Sum.md');
     expect(fm!['lc-status']).toBe('accepted');
   });
 });

@@ -262,8 +262,12 @@ export class LeetCodeSettingTab extends PluginSettingTab {
 
     // New-placeholder row: name + value inputs + add button.
     // Draft state lives in the instance fields declared above so it survives
-    // renderTab() re-renders during typing.
-    new Setting(placeholderGroup)
+    // renderTab() re-renders during typing. Wrapped in .lc-placeholder-add so
+    // styles.css can lay it out as label-on-top + controls-in-one-row — with
+    // Obsidian's default Setting layout the two inputs + button squeeze the
+    // left-hand label column to one-character width (vertical text).
+    const addRow = placeholderGroup.createDiv('lc-placeholder-add');
+    new Setting(addRow)
       .setName('新增占位符')
       .addText((t) => t
         .setPlaceholder('名称（snake_case）')

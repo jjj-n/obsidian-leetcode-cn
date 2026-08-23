@@ -81,8 +81,8 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
 1. **登录**：设置 → LeetCode → `Log in`，在弹出的嵌入式浏览器窗口中正常登录 leetcode.cn，插件自动捕获 session。若嵌入式窗口在你的平台上不可用，改用设置面板的 Manual cookie 输入框粘贴 `LEETCODE_SESSION` cookie。
    / **Log in**: Settings → LeetCode → `Log in`, sign in normally inside the embedded browser window. If the embedded window doesn't work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
-2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）、输入 slug（如 `two-sum`）、题号（如 `70`），或**直接输入中文/英文题名搜索**（如 `两数之和`、`climbing stairs`）→ 搜索结果弹窗选择 → 插件抓取题面与代码，按模板生成 `{id}-{slug}.md` 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
-   / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL, type a slug (`two-sum`) or a number (`70`), or **search by title in Chinese or English** (`两数之和`, `climbing stairs`) and pick from the results → the plugin fetches the statement and code, writes the `{id}-{slug}.md` note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
+2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）、输入 slug（如 `two-sum`）、题号（如 `70`），或**直接输入中文/英文题名搜索**（如 `两数之和`、`climbing stairs`）→ 搜索结果弹窗选择 → 插件抓取题面与代码，按模板生成 `{id}. {题名}.md`（如 `1. 两数之和.md`） 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
+   / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL, type a slug (`two-sum`) or a number (`70`), or **search by title in Chinese or English** (`两数之和`, `climbing stairs`) and pick from the results → the plugin fetches the statement and code, writes the `{id}. {题名}.md`（如 `1. 两数之和.md`） note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
 3. **题解工作流**：在抓取生成的笔记中——
    - 直接运行 `刷新题解` 按范围刷新已有锚点；
    - 或写一行 `题解链接: https://leetcode.cn/problems/.../solutions/.../` 再运行 `吸收题解标记`；
@@ -93,7 +93,7 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
 ## 笔记格式 / Note Format
 
-- 笔记位于可配置的题目文件夹（默认 `LeetCode/`），文件名 `{id}-{slug}.md`
+- 笔记位于可配置的题目文件夹（默认 `LeetCode/`），文件名 `{id}. {题名}.md`（如 `1. 两数之和.md`）
 - 默认模板对齐刷题笔记的中文属性体系：`created` / `分类`（cn 官方中文标签自动填充，如 `数组、哈希表`）/ `难度`（简单/中等/困难）/ `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言）；插件内部仅维护 `lc-slug` / `lc-language` / `lc-status` 三个字段（`lc-status` 不会从已做题回退），旧版本的 `lc-id` / `lc-url` 等身份字段在重新打开时自动清除；`tags` 与用户已有条目做并集，不会丢你的手动添加
 - 正文：frontmatter 下方是 `链接：` 行（题目直达链接，无 H1——Obsidian 顶部本就显示文件名），之后依次为 `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误`
 - 回顾表等**每篇笔记的附加内容不硬编码在模板里**：设置 → 笔记 → `笔记尾部附加内容` 填入任意 Markdown（支持全部占位符），会渲染后追加到每篇新笔记末尾；例如一个 dataview 刷题回顾表（需安装 Dataview 插件）
@@ -120,7 +120,7 @@ class Solution: …
 
 - 题解锚点 `source` 支持 `url`（社区题解链接）/ `ac`（你的 AC 提交）/ `official`（官方题解）/ `starter`（题目初始代码）；同一题可以有多个 `lc:solution` 锚点（多解法），一篇笔记可以包含多道题（多题一笔记）
 
-- Notes live in the configurable problems folder (default `LeetCode/`) as `{id}-{slug}.md`
+- Notes live in the configurable problems folder (default `LeetCode/`) as `{id}. {题名}.md`（如 `1. 两数之和.md`）
 - The default template follows a Chinese property vocabulary for practice notes: `created` / `分类` (auto-filled with official cn topic labels, e.g. `数组、哈希表`) / `难度` (简单/中等/困难) / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags` (`leetcode` + language). The plugin maintains only three internal keys — `lc-slug` / `lc-language` / `lc-status` (`lc-status` never regresses from solved); identity keys from older versions (`lc-id`, `lc-url`, …) are removed on re-open; `tags` is union-merged with your manual entries
 - Body: a `链接：` line under the frontmatter (no H1 — Obsidian's inline title already shows the note name), then `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误`
 - Per-note extras (a review table, links) are **not hardcoded** into the template: Settings → Notes → `笔记尾部附加内容` accepts any Markdown (all placeholders supported) and is rendered onto the tail of every new note — e.g. a dataview review table (requires the Dataview plugin)
