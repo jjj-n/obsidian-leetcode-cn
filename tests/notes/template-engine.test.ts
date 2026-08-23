@@ -129,7 +129,6 @@ describe('DEFAULT_TEMPLATE', () => {
     expect(result).toContain('lc-slug: two-sum');
     expect(result).toContain('lc-language: python3');
     expect(result).toContain('难度: 简单');
-    expect(result).toContain('# 1. 两数之和');
     expect(result).toContain('链接：[1. 两数之和 - 力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
     // Anchors now include slug parameters
     expect(result).toContain('<!-- lc:problem slug="two-sum" -->');
@@ -141,8 +140,18 @@ describe('DEFAULT_TEMPLATE', () => {
     expect(result).toContain('## 题解');
     expect(result).toContain('## 题解思路');
     expect(result).toContain('## 遇到的错误');
-    expect(result).toContain('## 最近刷题回顾');
-    expect(result).toContain('from #python3 and #leetcode and !"01丨Templates"');
+  });
+
+  it('has no H1 (Obsidian inline title already shows the note name)', () => {
+    const result = renderTemplate(DEFAULT_TEMPLATE, sampleData);
+    expect(result).not.toMatch(/^# /m);
+  });
+
+  it('does not hardcode per-note extras (dataview block, vault links)', () => {
+    const result = renderTemplate(DEFAULT_TEMPLATE, sampleData);
+    expect(result).not.toContain('dataview');
+    expect(result).not.toContain('最近刷题回顾');
+    expect(result).not.toContain('[[leetcode_home]]');
   });
 
   it('frontmatter carries the user template vocabulary, not retired keys', () => {

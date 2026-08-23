@@ -51,12 +51,14 @@ const BUILTIN_PLACEHOLDERS: Record<string, keyof TemplateData> = {
 
 /** Default template — mirrors the user's hand-tuned Templater template
  *  (vault: 01丨Templates/LeetCode Template(Java).md) so plugin-generated notes
- *  drop straight into their existing dataview-based review workflow:
+ *  drop straight into their existing workflow:
  *    - frontmatter uses their Chinese property vocabulary (created/分类/难度/
  *      分数/情况/时间复杂度/空间复杂度/备注) with 分类 and 难度 auto-filled
  *    - plugin-owned internals (lc-slug/lc-language/lc-status) sit at the end
- *    - `链接：` line under frontmatter instead of a metadata blockquote
- *    - `## 最近刷题回顾` dataview table keyed off the #leetcode + language tags
+ *    - a `链接：` line under frontmatter instead of a metadata blockquote
+ *    - NO H1 (Obsidian's inline title already shows the note name) and NO
+ *      embedded review table — per-note extras live in the user-configurable
+ *      尾部附加内容 (noteFooter) setting instead of being hardcoded here.
  *  Plugin-owned regions use HTML comments (`<!-- lc:problem -->`) as anchors.
  *  `lc-language` in frontmatter is the single source of truth for code language. */
 export const DEFAULT_TEMPLATE = [
@@ -76,8 +78,6 @@ export const DEFAULT_TEMPLATE = [
   'lc-language: {{language}}',
   'lc-status: untouched',
   '---',
-  '',
-  '# {{id}}. {{title_cn}}',
   '',
   '链接：[{{id}}. {{title_cn}} - 力扣 (LeetCode)]({{url}})',
   '',
@@ -112,25 +112,6 @@ export const DEFAULT_TEMPLATE = [
   '## 遇到的错误',
   '',
   '（做题时踩过的坑，插件永不修改）',
-  '',
-  '## 最近刷题回顾',
-  '```dataview',
-  'table',
-  '    分类,',
-  '    难度,',
-  '    情况,',
-  '    备注,',
-  '    choice(',
-  '        date(today) = date(created),',
-  '        "Today",',
-  '        dateformat(created, "MMMM dd, yyyy")',
-  '    ) AS "创建时间"',
-  'from #{{language}} and #leetcode and !"01丨Templates"',
-  'sort created desc',
-  'limit 10',
-  '```',
-  '',
-  '[[leetcode_home]]',
   '',
 ].join('\n');
 

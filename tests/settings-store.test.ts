@@ -10,12 +10,13 @@ function makeMockPlugin(initial: unknown = null) {
 }
 
 describe('SettingsStore (AUTH-03, AUTH-05, D-07, D-10)', () => {
-  it('defaults: problemsFolder="LeetCode", defaultLanguage="python3", auth=null', async () => {
+  it('defaults: problemsFolder="LeetCode", defaultLanguage="java", auth=null', async () => {
     const plugin = makeMockPlugin(null);
     const s = await SettingsStore.load(plugin as never);
     expect(s.getAuthCookies()).toBeNull();
     expect(s.getProblemsFolder()).toBe('LeetCode');
-    expect(s.getDefaultLanguage()).toBe('python3');
+    expect(s.getDefaultLanguage()).toBe('java');
+    expect(s.getNoteFooter()).toBe('');
     expect(s.getProblemIndex()).toBeNull();
   });
 

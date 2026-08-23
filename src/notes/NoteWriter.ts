@@ -106,6 +106,8 @@ export interface NoteWriterSettings {
   getDefaultLanguage(): string;
   getRegion(): 'com' | 'cn';
   getNoteTemplate(): string;
+  /** Tail block appended to new notes (placeholder-rendered). '' = none. */
+  getNoteFooter(): string;
   getProblemDetail(slug: string): DetailCacheEntry | null;
   setProblemDetail(slug: string, detail: DetailCacheEntry): Promise<void>;
   getDownloadImages(): boolean;
@@ -519,7 +521,13 @@ export class NoteWriter {
     });
     const template = this.settings.getNoteTemplate() || DEFAULT_TEMPLATE;
     const customPlaceholders = this.settings.getCustomPlaceholders();
-    const body = renderTemplate(template, templateData, customPlaceholders);
+    let body = renderTemplate(template, templateData, customPlaceholders);
+    // User-owned tail block (e.g. a dataview review table) — rendered with the
+    // same placeholders so {{language}} etc. work inside it. Skipped when empty.
+    const footerTemplate = this.settings.getNoteFooter().trim();
+    if (footerTemplate) {
+      body = `${body}\n${renderTemplate(footerTemplate, templateData, customPlaceholders).trim()}\n`;
+    }
     const createdRaw = await this.app.vault.create(filePath, body);
     const file = narrowToTFile(createdRaw);
 

@@ -217,6 +217,10 @@ export interface PluginData {
    *  default. Stored as-is; renderTemplate replaces {{placeholders}} at note
    *  creation time. */
   noteTemplate: string;
+  /** User-defined tail block appended to every new problem note after the
+   *  template body. Rendered with the same placeholders (e.g. {{language}}),
+   *  so a dataview review block can key off the language tag. Empty = none. */
+  noteFooter: string;
   /** Ticket #02 — download cn CDN images to vault. Default OFF. When ON,
    *  images from leetcode.cn CDN are downloaded to imageFolder and links
    *  rewritten to local vault paths. */
@@ -319,7 +323,7 @@ const DEFAULT_DATA: PluginData = {
   username: null,
   isPremium: null,
   problemsFolder: 'LeetCode',
-  defaultLanguage: 'python3',
+  defaultLanguage: 'java',
   // Phase 16 INDENT-04 D-06 — 'auto' = per-language default applies. Go
   // always uses '\t' regardless of override (gofmt non-negotiable);
   // exception is enforced by the consumer (childEditorLanguage.ts).
@@ -355,6 +359,11 @@ const DEFAULT_DATA: PluginData = {
   autoAIKnowledgeGraph: true,  // AIKG-01 default ON — core feature
   featureFlags: { lookAheadEdges: false },  // AIKG-06 default OFF — experimental
   noteTemplate: '',  // '' = use built-in DEFAULT_TEMPLATE
+  // User-defined tail block appended to every new problem note (rendered with
+  // the same placeholders as the template — e.g. a dataview review table).
+  // '' = append nothing. Exists so per-note extras are user-owned instead of
+  // hardcoded in DEFAULT_TEMPLATE.
+  noteFooter: '',
   downloadImages: false,
   imageFolder: '附件/leetcode',
   customPlaceholders: {},
@@ -873,6 +882,9 @@ export class SettingsStore {
       noteTemplate: typeof raw.noteTemplate === 'string' && raw.noteTemplate.length > 0
         ? raw.noteTemplate
         : DEFAULT_DATA.noteTemplate,
+      noteFooter: typeof raw.noteFooter === 'string'
+        ? raw.noteFooter
+        : DEFAULT_DATA.noteFooter,
       downloadImages: typeof raw.downloadImages === 'boolean'
         ? raw.downloadImages
         : DEFAULT_DATA.downloadImages,
@@ -1169,6 +1181,14 @@ export class SettingsStore {
   /** Ticket #5 — persist the user's note template. */
   async setNoteTemplate(v: string): Promise<void> {
     this.data.noteTemplate = v;
+    await this.persist();
+  }
+
+  /** Tail block appended to every new problem note (placeholder-rendered). */
+  getNoteFooter(): string { return this.data.noteFooter; }
+
+  async setNoteFooter(v: string): Promise<void> {
+    this.data.noteFooter = v;
     await this.persist();
   }
 

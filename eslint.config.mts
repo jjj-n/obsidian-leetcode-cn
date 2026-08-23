@@ -91,6 +91,12 @@ export default tseslint.config(
             'spaces',
           ],
           ignoreRegex: [
+            // cn fork — the settings UI is Chinese. An English sentence-case
+            // rule cannot evaluate CJK text (it mangles embedded brand words
+            // like 'LeetCode'/'Cookie' mid-sentence), so any string containing
+            // a CJK character is skipped wholesale. Pure-English strings stay
+            // checked.
+            '[\\u4e00-\\u9fff]',
             // Phase 19 save-delay dropdown labels are unit-suffixed numerics
             // ('300ms', '400ms (default)', '500ms', '1s', '2s') — not
             // English sentences. The rule's first-token capitalization

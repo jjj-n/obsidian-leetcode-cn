@@ -82,16 +82,22 @@ export default class LeetCodePlugin extends Plugin {
       callback: () => { void this.auth.login(); },
     });
 
-    // Core loop — fetch a problem (URL or slug) into a note via the
-    // NoteWriter.openProblem pipeline (re-opens existing notes, fetches and
-    // writes new ones; all failure modes surface as Notices inside it).
+    // Core loop — fetch a problem (URL, slug, or Chinese-title search) into a
+    // note via the NoteWriter.openProblem pipeline (re-opens existing notes,
+    // fetches and writes new ones; all failure modes surface as Notices inside it).
     this.addCommand({
       id: 'fetch-problem',
       name: 'Fetch problem',
       callback: () => {
-        new FetchProblemModal(this.app, (slug) => {
-          void this.notes.openProblem(slug);
-        }).open();
+        new FetchProblemModal(
+          this.app,
+          (slug) => {
+            void this.notes.openProblem(slug);
+          },
+          // Non-slug input (Chinese titles, keywords, bare numbers) → cn
+          // server-side searchKeywords; hits open in the picker modal.
+          (query) => this.client.searchCNProblems(query, 20),
+        ).open();
       },
     });
 

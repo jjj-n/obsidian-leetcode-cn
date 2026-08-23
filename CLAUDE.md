@@ -32,15 +32,15 @@
 | `src/auth/` | `AuthService`（嵌入式 BrowserWindow 登录、`loginManual` 手动 cookie、登出清 cookie 分区）+ `BrowserWindowLogin` |
 | `src/browse/` | `ProblemListService` / `QuickProblemSearchModal` / `FilterModal` —— **已实现、有测试、未接任何命令**（Roadmap：题目浏览器） |
 | `src/notes/` | 核心管道。`NoteWriter`（公开方法：`openProblem` / `addProblemToNote` / `forceRefresh` / `refreshSolution` / `refreshSingleAnchor` / `refreshProblemAnchors` / `refreshAllNoteAnchors`）、`NoteTemplate`（`{id}-{slug}.md` 文件名、frontmatter 写入器、正文骨架）、`TemplateEngine`（14 个内置占位符 + 自定义占位符引用展开）、`htmlToMarkdown`（turndown 管道，确定性输出有 snapshot 测试）、`AnchorParser`/`AnchorRewriter`（锚点解析与重写）、`SolutionMarker`（`题解链接:` 标记吸收）、`ImageDownloader`、`PasteSanitizer`、`BaseFile`、`HeadingRegion` |
-| `src/settings/` | `SettingsStore`（`data.json` 唯一读写入口，全字段 sanitize 守卫）+ `SettingsTab` |
-| `src/ui/` | `FetchProblemModal`（核心入口 + `parseProblemSlug`）、`SolutionUrlModal` / `RefreshScopeModal`（回调类型统一 `void | Promise<void>`） |
+| `src/settings/` | `SettingsStore`（`data.json` 唯一读写入口，全字段 sanitize 守卫）+ `SettingsTab`（中文界面：登录/站点/笔记/图片/自定义占位符） |
+| `src/ui/` | `FetchProblemModal`（核心入口 + `parseProblemSlug` / `classifyFetchInput` 输入路由：URL/slug 直取，中文题名、含空格关键词、纯数字走 `searchCNProblems` 服务端搜索 → `ProblemSearchResultModal` 选择）、`SolutionUrlModal` / `RefreshScopeModal`（回调类型统一 `void | Promise<void>`） |
 | `src/shared/` | `logger`（cookie 脱敏，禁止打印 LEETCODE_SESSION）、`errors`、`timers` |
 
 **锚点系统**：内容区用成对 HTML 注释包裹——`lc:problem` / `lc:code` / `lc:solution` / `lc:solution_approach`；题解 `source` 取值 `url` / `ac` / `official` / `starter`。插件只改锚点内部，锚点外内容永不触碰。支持多题一笔记与一题多解法。
 
-**笔记数据**：默认模板（`TemplateEngine.DEFAULT_TEMPLATE`）对齐用户的中文刷题笔记体系——frontmatter 用 `created` / `分类`（cn `topicTags.translatedName` 自动填充）/ `难度` / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言），正文含 `链接：` 行与 `## 最近刷题回顾` dataview 块。插件每次覆写的只有 `lc-slug` / `lc-language` / `lc-status`（`lc-status` 不从非 untouched 回退）；`lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-region` 为已退役键，`applyFrontmatter` 重写时删除（旧笔记迁移）；不再写 `aliases`；`tags` 与用户已有条目并集。题面详情缓存于 `data.json`，TTL 7 天（`NoteWriter.CACHE_TTL_MS`），过期后台刷新，离线可读。
+**笔记数据**：默认模板（`TemplateEngine.DEFAULT_TEMPLATE`）对齐用户的中文刷题笔记体系——frontmatter 用 `created` / `分类`（cn `topicTags.translatedName` 自动填充）/ `难度` / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言，默认语言 `java`），正文以 `链接：` 行开头（**无 H1**——Obsidian 顶部已显示文件名），无硬编码回顾表；每篇笔记末尾的附加内容由用户设置 `noteFooter`（`笔记尾部附加内容`，占位符渲染）决定，默认空。插件每次覆写的只有 `lc-slug` / `lc-language` / `lc-status`（`lc-status` 不从非 untouched 回退）；`lc-id` / `lc-title` / `lc-difficulty` / `lc-url` / `lc-region` 为已退役键，`applyFrontmatter` 重写时删除（旧笔记迁移）；不再写 `aliases`；`tags` 与用户已有条目并集。题面详情缓存于 `data.json`，TTL 7 天（`NoteWriter.CACHE_TTL_MS`），过期后台刷新，离线可读。
 
-**当前命令**（7 条）：`fetch-problem`（核心入口：`FetchProblemModal` 解析 URL/slug → `NoteWriter.openProblem`；匿名可抓公开题目，付费题与题解需登录）、`login`、`logout`、`paste-sanitize`、`absorb-solution-markers`、`input-solution-url`、`refresh-solutions`。`parseProblemSlug`（`src/ui/FetchProblemModal.ts`）是输入解析的唯一实现，有单测覆盖。
+**当前命令**（7 条）：`fetch-problem`（核心入口：`FetchProblemModal` 按 `classifyFetchInput` 路由——URL/slug 直取，中文/英文题名、纯数字走 cn `problemsetQuestionList` 的 `searchKeywords` 服务端搜索后弹 `ProblemSearchResultModal` 选择 → `NoteWriter.openProblem`；匿名可抓公开题目，付费题与题解需登录）、`login`、`logout`、`paste-sanitize`、`absorb-solution-markers`、`input-solution-url`、`refresh-solutions`。`parseProblemSlug` / `classifyFetchInput`（`src/ui/FetchProblemModal.ts`）是输入解析的唯一实现，有单测覆盖。
 
 ## 硬性约定
 
@@ -69,7 +69,7 @@
 
 ## 已知技术债（按清理优先级）
 
-1. 设置面板的孤儿 UI：`AI coach` 分区（provider/API key/Bedrock 配置）、`Knowledge graph` 分区（技巧反链依赖已删除的 Obsidian 内提交）、Notes 下的 `Click behavior`（配置不存在的浏览器预览）；连同 `SettingsStore` 的 contest / widget 时代字段（`indentSizeOverride`、`showRelativeLineNumbers`、`autoMigrateOnOpen`、`aiCostLedger`、`contest*`、`previewClickBehavior`、`techniquesFolder*`、`autoBacklinks*`）——**全部在为已删除的功能做配置**，待清理。涉及 `data.json` 向后兼容决策（建议：读取时容忍、写出时丢弃）
+1. 设置面板的孤儿 UI 已删除（`AI coach` / `Knowledge graph` 分区与 `Click behavior` 选项，中文界面重写时移除）；`SettingsStore` 的 contest / widget 时代字段（`indentSizeOverride`、`showRelativeLineNumbers`、`autoMigrateOnOpen`、`aiCostLedger`、`contest*`、`previewClickBehavior`、`techniquesFolder*`、`autoBacklinks*`、`activeAIProvider`、`providerConfigs`）仍在 data.json 中持久化——**全部在为已删除的功能做配置**，待清理。涉及 `data.json` 向后兼容决策（建议：读取时容忍、写出时丢弃）
 2. `styles.css`（85 KB）含 widget 时代 CSS，待逐类审计瘦身
 3. 版本号仍为上游继承的 1.3.2，待归零 `0.1.0`（`manifest.json` / `package.json` / `versions.json` 三处同步，versions.json 加 `"0.1.0": "1.12.7"`）；`package.json` 的 name/author 仍为上游身份，待改 `obsidian-leetcode-cn` / `jjj-n`
 4. 浏览模块（`src/browse/`）未接线——`Fetch problem` 命令已落地（0.1.0），下一步是题目浏览器的交互设计与接线

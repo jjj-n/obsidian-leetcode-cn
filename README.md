@@ -81,8 +81,8 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
 1. **登录**：设置 → LeetCode → `Log in`，在弹出的嵌入式浏览器窗口中正常登录 leetcode.cn，插件自动捕获 session。若嵌入式窗口在你的平台上不可用，改用设置面板的 Manual cookie 输入框粘贴 `LEETCODE_SESSION` cookie。
    / **Log in**: Settings → LeetCode → `Log in`, sign in normally inside the embedded browser window. If the embedded window doesn't work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
-2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）或直接输入 slug（如 `two-sum`）→ 插件抓取题面与代码，按模板生成 `{id}-{slug}.md` 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
-   / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL (any subpath works) or type a slug → the plugin fetches the statement and code, writes the `{id}-{slug}.md` note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
+2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）、输入 slug（如 `two-sum`）、题号（如 `70`），或**直接输入中文/英文题名搜索**（如 `两数之和`、`climbing stairs`）→ 搜索结果弹窗选择 → 插件抓取题面与代码，按模板生成 `{id}-{slug}.md` 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
+   / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL, type a slug (`two-sum`) or a number (`70`), or **search by title in Chinese or English** (`两数之和`, `climbing stairs`) and pick from the results → the plugin fetches the statement and code, writes the `{id}-{slug}.md` note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
 3. **题解工作流**：在抓取生成的笔记中——
    - 直接运行 `刷新题解` 按范围刷新已有锚点；
    - 或写一行 `题解链接: https://leetcode.cn/problems/.../solutions/.../` 再运行 `吸收题解标记`；
@@ -95,7 +95,8 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
 
 - 笔记位于可配置的题目文件夹（默认 `LeetCode/`），文件名 `{id}-{slug}.md`
 - 默认模板对齐刷题笔记的中文属性体系：`created` / `分类`（cn 官方中文标签自动填充，如 `数组、哈希表`）/ `难度`（简单/中等/困难）/ `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags`（`leetcode` + 语言）；插件内部仅维护 `lc-slug` / `lc-language` / `lc-status` 三个字段（`lc-status` 不会从已做题回退），旧版本的 `lc-id` / `lc-url` 等身份字段在重新打开时自动清除；`tags` 与用户已有条目做并集，不会丢你的手动添加
-- 正文：frontmatter 下方是 `链接：` 行（题目直达链接），之后依次为 `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误` → `## 最近刷题回顾`（内置 dataview 表格，按 `created` 倒序列出最近 10 道，需安装 Dataview 插件）
+- 正文：frontmatter 下方是 `链接：` 行（题目直达链接，无 H1——Obsidian 顶部本就显示文件名），之后依次为 `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误`
+- 回顾表等**每篇笔记的附加内容不硬编码在模板里**：设置 → 笔记 → `笔记尾部附加内容` 填入任意 Markdown（支持全部占位符），会渲染后追加到每篇新笔记末尾；例如一个 dataview 刷题回顾表（需安装 Dataview 插件）
 - 内容区用 HTML 注释锚点包裹，插件按锚点精准刷新、不动锚点外的内容：
 
 ```
@@ -121,22 +122,20 @@ class Solution: …
 
 - Notes live in the configurable problems folder (default `LeetCode/`) as `{id}-{slug}.md`
 - The default template follows a Chinese property vocabulary for practice notes: `created` / `分类` (auto-filled with official cn topic labels, e.g. `数组、哈希表`) / `难度` (简单/中等/困难) / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags` (`leetcode` + language). The plugin maintains only three internal keys — `lc-slug` / `lc-language` / `lc-status` (`lc-status` never regresses from solved); identity keys from older versions (`lc-id`, `lc-url`, …) are removed on re-open; `tags` is union-merged with your manual entries
-- Body: a `链接：` line under the frontmatter, then `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误` → `## 最近刷题回顾` (an embedded dataview table listing the 10 most recent notes by `created`; requires the Dataview plugin)
+- Body: a `链接：` line under the frontmatter (no H1 — Obsidian's inline title already shows the note name), then `## 题面` → `## 代码` → `## 代码思路` → `## 题解` → `## 题解思路` → `## 遇到的错误`
+- Per-note extras (a review table, links) are **not hardcoded** into the template: Settings → Notes → `笔记尾部附加内容` accepts any Markdown (all placeholders supported) and is rendered onto the tail of every new note — e.g. a dataview review table (requires the Dataview plugin)
 - The body uses HTML-comment anchors; the plugin refreshes inside anchors and never touches content outside them (structure as above)
 - Solution anchor `source`: `url` (community solution link) / `ac` (your AC submission) / `official` (official editorial) / `starter` (the problem's starter code); multiple `lc:solution` anchors per problem (multi-solution) and multiple problems per note are both supported
 
 ## 设置 / Settings
 
-设置 → LeetCode。/ Settings → LeetCode:
+设置界面为中文。设置 → LeetCode。/ The settings UI is in Chinese:
 
-- **Authentication**：登录、登出、手动粘贴 cookie 兜底 / Log in, log out, manual cookie paste fallback
-- **Notes**：题目笔记文件夹（默认 `LeetCode`）、默认语言（默认 `python3`）/ Problems folder (default `LeetCode`), default language (default `python3`)
-- **Images**：下载图片到 vault 开关 + 图片文件夹 / Download-images toggle + image folder
-- **Custom placeholders**：自定义占位符，值模板可引用内置占位符（如 `{{my_id}}` = `lc-{{id}}`）/ Custom placeholders whose value templates may reference built-ins (e.g. `{{my_id}}` = `lc-{{id}}`)
-
-> 面板中另有 `AI coach`、`Knowledge graph` 两个分区和 Notes 下的 `Click behavior` 选项——它们是已移除功能（AI 审查、Accepted 反链、题目预览）的残留界面，当前不产生任何作用，将在后续版本清理。
->
-> The panel also shows `AI coach` and `Knowledge graph` sections plus a `Click behavior` option under Notes — remnants of removed features (AI review, Accepted backlinks, problem preview) with no effect today; they will be removed in a future release.
+- **登录**：嵌入式浏览器登录、登出、手动粘贴 Cookie 兜底 / Embedded-browser login, logout, manual cookie fallback
+- **站点**：leetcode.cn（中国站，默认）/ leetcode.com（国际站）/ Site selector
+- **笔记**：题目笔记文件夹（默认 `LeetCode`，可自定义任意路径）、默认代码语言（默认 `Java`）、笔记尾部附加内容（自定义每篇笔记末尾的 Markdown 块，支持占位符）/ Problems folder (default `LeetCode`), default language (default `Java`), per-note footer block
+- **图片**：下载图片到 vault 开关 + 图片文件夹（可自定义路径）/ Download-images toggle + image folder
+- **自定义占位符**：自定义占位符，值模板可引用内置占位符（如 `{{my_id}}` = `lc-{{id}}`）/ Custom placeholders whose value templates may reference built-ins
 
 **内置占位符 / Built-in placeholders：**
 `{{slug}}` `{{title}}` `{{title_cn}}` `{{problem}}` `{{code}}` `{{solution}}` `{{solution_approach}}` `{{difficulty}}` `{{tags}}` `{{tags_cn}}` `{{id}}` `{{url}}` `{{solved_date}}` `{{language}}`

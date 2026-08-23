@@ -8,7 +8,7 @@
 import { LeetCodeAdvanced, LeetCodeCN, Credential, CredentialCN } from '@leetnotion/leetcode-api';
 import type { PastContests, ContestQuestions } from '@leetnotion/leetcode-api';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { fetchCNProblemDetail } from './LeetCodeCNAdapter';
+import { fetchCNProblemDetail, fetchCNProblemSearch } from './LeetCodeCNAdapter';
 
 /** LC's `question` object as returned by `lc.problem(slug)`.
  *  Only the fields we consume are declared; LC returns additional fields we ignore.
@@ -162,6 +162,14 @@ export class LeetCodeClient {
     }).problem(slug);
     if (!q || !q.questionFrontendId) return null;
     return q;
+  }
+
+  /** cn server-side problem search (title/titleCn keywords). See fetchCNProblemSearch. */
+  async searchCNProblems(
+    keyword: string,
+    limit = 20,
+  ): Promise<import('./LeetCodeCNAdapter').CNProblemSearchHit[]> {
+    return fetchCNProblemSearch(this.lcCN, keyword, limit);
   }
 
   /** Phase 10 CONTEST-01 — fetch past contests with pagination support.

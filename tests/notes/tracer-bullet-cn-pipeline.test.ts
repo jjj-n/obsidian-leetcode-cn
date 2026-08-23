@@ -11,7 +11,8 @@
 //   - the user-template frontmatter vocabulary (created, 分类 from
 //     translatedName, 难度 in Chinese, tags leetcode+language) plus the
 //     plugin internals (lc-slug, lc-language, lc-status)
-//   - a 链接 line under frontmatter and a 最近刷题回顾 dataview block
+//   - a 链接 line under frontmatter (no H1 — Obsidian's inline title shows
+//     the note name; per-note extras live in the noteFooter setting)
 //   - both plugin-owned anchors (`<!-- lc:problem -->`, `<!-- lc:code -->`) closed
 //   - problem HTML converted to Obsidian-compatible Markdown (examples, sup, code)
 //   - no unresolved placeholders left after render
@@ -130,9 +131,9 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     // 5. Template render — final note body.
     const body = renderTemplate(DEFAULT_TEMPLATE, templateData);
 
-    // (a) Chinese H1 title with 题号 prefix, not English.
-    expect(body).toMatch(/^# 1\. 两数之和$/m);
-    expect(body).not.toMatch(/^# Two Sum$/m);
+    // (a) No H1 at all — Obsidian's inline title shows the note name; the
+    //     Chinese title lives in the 链接 line under the frontmatter.
+    expect(body).not.toMatch(/^# /m);
 
     // (b) Frontmatter uses the user-template vocabulary + plugin internals.
     expect(body).toMatch(/^created: \d{4}-\d{2}-\d{2}$/m);
@@ -155,10 +156,10 @@ describe('tracer-bullet: cn problem → rendered note (data pipeline)', () => {
     //      metadata — those live in 难度/分类 now).
     expect(body).toContain('链接：[1. 两数之和 - 力扣 (LeetCode)](https://leetcode.cn/problems/two-sum/)');
 
-    // (b3) 最近刷题回顾 dataview block keyed off the leetcode + language tags.
-    expect(body).toContain('## 最近刷题回顾');
-    expect(body).toContain('```dataview');
-    expect(body).toContain('from #python3 and #leetcode and !"01丨Templates"');
+    // (b3) No hardcoded per-note extras — the review table / footer is the
+    //      user-owned noteFooter setting, not part of the default template.
+    expect(body).not.toContain('dataview');
+    expect(body).not.toContain('## 最近刷题回顾');
 
     // (c) Plugin-owned anchors properly opened AND closed (with slug parameters).
     expect(body).toContain('<!-- lc:problem slug="two-sum" -->');

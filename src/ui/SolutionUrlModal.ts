@@ -29,7 +29,6 @@ export class SolutionUrlModal extends Modal {
       .setName('URL')
       .addText((text) =>
         text
-          // eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder is a URL; capitalizing the host would make it invalid
           .setPlaceholder('粘贴题解 URL，如 https://leetcode.cn/problems/.../solutions/.../')
           .setValue(this.url)
           .onChange((value) => {
