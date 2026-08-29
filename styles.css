@@ -268,6 +268,72 @@
   color: var(--text-muted);
   line-height: 1;
 }
+.leetcode-browser .lc-progress.is-hidden { display: none; }
+
+/* ── Quick chips (difficulty / status), added by the problem browser view ──── */
+/* The browser root is its own scroll container (slice+append rendering). */
+.leetcode-browser {
+  height: 100%;
+  overflow-y: auto;
+}
+.leetcode-browser .lc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.leetcode-browser .lc-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+.leetcode-browser .lc-chip:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+/* Idle difficulty chips carry their LC color; the active state (any chip)
+   overrides it with the accent — keep these rules AFTER the diff rules. */
+.leetcode-browser .lc-chip.lc-diff--easy   { color: var(--color-green); }
+.leetcode-browser .lc-chip.lc-diff--medium { color: var(--color-yellow); }
+.leetcode-browser .lc-chip.lc-diff--hard   { color: var(--color-red); }
+.leetcode-browser .lc-chip.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.leetcode-browser .lc-chip-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--background-modifier-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.leetcode-browser .lc-empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.leetcode-browser .lc-more-hint {
+  padding: 8px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+.leetcode-browser .lc-footer__hint {
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 11px;
+}
 
 /* ── Filter modal ──────────────────────────────────────────────────────────── */
 /* Obsidian's .modal-container > .modal > .modal-content hierarchy all have

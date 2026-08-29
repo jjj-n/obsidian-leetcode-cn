@@ -14,9 +14,8 @@
 // - Knowledge graph / pattern classification — v2 direction, not promised
 // - Problem preview view — folded into the problem-browser roadmap item
 //
-// The problem browser (src/browse/) is implemented but not wired to any
-// command yet; wiring the `Fetch problem` command (NoteWriter.openProblem)
-// is the current top roadmap item.
+// The problem browser (src/browse/ProblemBrowserView) is wired to a ribbon
+// icon and the `打开题目浏览器` command; row clicks land in NoteWriter.openProblem.
 
 import { Notice, Plugin } from 'obsidian';
 import type { MarkdownView, MarkdownFileInfo, TFile } from 'obsidian';
@@ -25,6 +24,7 @@ import { installRequestUrlFetcher } from './api/requestUrlFetcher';
 import { LeetCodeClient } from './api/LeetCodeClient';
 import { AuthService } from './auth/AuthService';
 import { ProblemListService } from './browse/ProblemListService';
+import { ProblemBrowserView, PROBLEM_BROWSER_VIEW_TYPE } from './browse/ProblemBrowserView';
 import { NoteWriter } from './notes/NoteWriter';
 import { LeetCodeSettingTab } from './settings/SettingsTab';
 import { pasteSanitize } from './notes/PasteSanitizer';
@@ -75,7 +75,25 @@ export default class LeetCodePlugin extends Plugin {
     // Step 7 — settings tab.
     this.addSettingTab(new LeetCodeSettingTab(this.app, this));
 
-    // Step 8 — basic commands.
+    // Step 8 — problem browser view (ribbon + command palette entry).
+    this.registerView(
+      PROBLEM_BROWSER_VIEW_TYPE,
+      (leaf) => new ProblemBrowserView(leaf, {
+        list: this.list,
+        notes: this.notes,
+        settings: this.lcSettings,
+      }),
+    );
+    this.addRibbonIcon('list-checks', '打开题目浏览器', () => {
+      void this.activateBrowser();
+    });
+    this.addCommand({
+      id: 'open-problem-browser',
+      name: '打开题目浏览器',
+      callback: () => { void this.activateBrowser(); },
+    });
+
+    // Step 9 — basic commands.
     this.addCommand({
       id: 'login',
       name: 'Log in',
@@ -303,6 +321,18 @@ export default class LeetCodePlugin extends Plugin {
 
   onunload(): void {
     logger.info('[leetcode-cn] plugin unloaded');
+  }
+
+  /** Reveal an existing browser leaf, or create one in the left sidebar. */
+  private async activateBrowser(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(PROBLEM_BROWSER_VIEW_TYPE);
+    const leaf = existing[0] ?? await (async () => {
+      const fresh = workspace.getLeftLeaf(false) ?? workspace.getLeaf(true);
+      await fresh.setViewState({ type: PROBLEM_BROWSER_VIEW_TYPE, active: true });
+      return fresh;
+    })();
+    await workspace.revealLeaf(leaf);
   }
 
 }

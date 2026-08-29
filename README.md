@@ -19,6 +19,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 ## 核心特性 / Core Features
 
 - 登录 leetcode.cn（嵌入式浏览器自动捕获 session，设置面板手动粘贴 cookie 兜底）
+- 题目浏览器侧边栏（ribbon 图标 / 命令面板打开）：搜索、难度/状态快捷筛选、高级复合筛选（标签、通过率、题号区间等）、AC 状态一览，点选即建笔记；全量题库索引缓存 24 小时，离线可浏览
 - 抓取题面：HTML → Obsidian Markdown，数学公式、上下标、代码块、图片格式全部保留
 - 抓取你的 AC 提交代码（无提交时回退到题目 starter code）
 - 抓取社区题解文章，自动拆分为代码（`## 题解`）与思路（`## 题解思路`）
@@ -29,6 +30,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 - 题面缓存 7 天，过期后台自动刷新
 
 - Log in to leetcode.cn (embedded browser session capture + manual cookie paste fallback)
+- Problem browser sidebar (ribbon icon / command palette): search, difficulty/status quick filters, advanced compound filtering (tags, acceptance, id ranges), AC status at a glance, click-to-create-note; full index cached for 24h, browsable offline
 - Fetch problem statements: HTML → Obsidian Markdown with math/sup/sub/code/images preserved
 - Fetch your AC submission code (falls back to the problem's starter code)
 - Fetch community solution articles, auto-split into code (`## 题解`) and approach (`## 题解思路`)
@@ -44,6 +46,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 
 | 命令 / Command | 作用 / What it does |
 |---|---|
+| `打开题目浏览器` | 左侧栏打开题目浏览器视图（ribbon 图标同入口）：搜索 / 筛选 / 点选建题；首次打开自动同步全量题库 / **Open the problem browser sidebar** (ribbon icon works too): search, filter, click-to-note; first open syncs the full problemset |
 | `Fetch problem` | **核心入口**：粘贴题目 URL 或输入 slug → 生成完整笔记（题面 + 代码 + 空题解锚点）；笔记已存在则直接打开并按需后台刷新 / **Core entry**: paste a problem URL or type a slug → a full note is created (statement + code + empty solution anchors); existing notes are re-opened with background refresh |
 | `Log in` | 嵌入式浏览器登录 leetcode.cn / Sign in via embedded browser |
 | `Log out` | 登出并清除本地 cookie / Sign out and clear local cookies |
@@ -54,12 +57,13 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 
 **Roadmap（按优先级 / in priority order）：**
 
-1. **题目浏览器**：搜索 + 难度/标签筛选 + 点选建题的浏览界面（`QuickProblemSearchModal` / `FilterModal` 已实现并有测试，待接线与交互打磨）。
-2. **上架准备**：补充截图、发布 GitHub release、向 `obsidianmd/obsidian-releases` 提交社区商店 PR。
+1. **上架准备**：补充截图、发布 GitHub release、向 `obsidianmd/obsidian-releases` 提交社区商店 PR。
 
-v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
+~~题目浏览器~~（已完成：侧边栏视图 + 搜索 / 筛选 / 点选建题，2026-08。）
 
-**Current state:** the seven commands above are available today, including the `Fetch problem` core entry. The problem browser UI and store submission are next on the roadmap. v2 directions (not promised): AI review, contest support.
+v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持、快速搜索命令（`QuickProblemSearchModal` 已实现待接线）。
+
+**Current state:** the eight commands above are available today, including the `Fetch problem` core entry and the problem browser sidebar. Store submission is next on the roadmap. v2 directions (not promised): AI review, contest support.
 
 ## 安装 / Install
 
@@ -83,12 +87,14 @@ v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持。
    / **Log in**: Settings → LeetCode → `Log in`, sign in normally inside the embedded browser window. If the embedded window doesn't work on your platform, paste your `LEETCODE_SESSION` cookie into the manual-cookie field instead.
 2. **抓题建笔记（核心闭环）**：命令面板 → `Fetch problem` → 粘贴题目链接（如 `https://leetcode.cn/problems/two-sum/`，任意子路径都可以）、输入 slug（如 `two-sum`）、题号（如 `70`），或**直接输入中文/英文题名搜索**（如 `两数之和`、`climbing stairs`）→ 搜索结果弹窗选择 → 插件抓取题面与代码，按模板生成 `{id}. {题名}.md`（如 `1. 两数之和.md`） 笔记并打开。笔记已存在时直接打开，缓存过期会后台刷新。无需登录即可抓取公开题目。
    / **Fetch a problem (core loop)**: command palette → `Fetch problem` → paste a problem URL, type a slug (`two-sum`) or a number (`70`), or **search by title in Chinese or English** (`两数之和`, `climbing stairs`) and pick from the results → the plugin fetches the statement and code, writes the `{id}. {题名}.md`（如 `1. 两数之和.md`） note from your template, and opens it. Existing notes are re-opened directly with background refresh when the cache is stale. Public problems can be fetched without logging in.
-3. **题解工作流**：在抓取生成的笔记中——
+3. **题目浏览器（浏览建题）**：点左侧栏 ribbon 图标（或命令面板 → `打开题目浏览器`）打开侧边栏视图。首次打开自动分页同步全量题库（带进度条，约一分钟；缓存 24 小时），之后离线可浏览。顶部搜索框支持题号 / 中英文题名 / slug；`简单/中等/困难` 与 `已解决/尝试过/未开始` 快捷筛选；漏斗按钮打开高级筛选（标签、通过率、题号区间、会员题，规则可组合，跨重启持久化）；点任意题目即建笔记或打开已有笔记。未登录时 AC 状态不可见（全部显示为未开始），登录后点刷新按钮即可。
+   / **Browse problems**: open the sidebar via the ribbon icon (or command palette → `打开题目浏览器`). The first open syncs the full problemset with a progress bar (~1 min, cached 24h), then it's browsable offline. Search by id / Chinese or English title / slug; quick chips for difficulty and status; the funnel button opens advanced compound filtering (topics, acceptance, id ranges, premium — persisted across restarts); clicking any problem creates or reveals its note. Logged out, AC status is hidden (everything shows as not started) — log in and hit refresh.
+4. **题解工作流**：在抓取生成的笔记中——
    - 直接运行 `刷新题解` 按范围刷新已有锚点；
    - 或写一行 `题解链接: https://leetcode.cn/problems/.../solutions/.../` 再运行 `吸收题解标记`；
    - 或运行 `输入题解 URL` 弹窗粘贴链接。
    / **Solution workflow**: in a fetched note — run `刷新题解` to refresh by scope; or write a `题解链接: <URL>` line and run `吸收题解标记`; or run `输入题解 URL` and paste a link.
-4. **粘贴清洗**：从 leetcode.cn 网页复制内容后，选中粘贴结果运行 `Paste sanitize`，公式、代码、图片链接会被整理成干净的 Obsidian Markdown。
+5. **粘贴清洗**：从 leetcode.cn 网页复制内容后，选中粘贴结果运行 `Paste sanitize`，公式、代码、图片链接会被整理成干净的 Obsidian Markdown。
    / **Paste sanitize**: after pasting content from the leetcode.cn website, select it and run `Paste sanitize` — formulas, code, and image links are converted into clean Obsidian Markdown.
 
 ## 笔记格式 / Note Format
