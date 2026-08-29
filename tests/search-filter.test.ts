@@ -44,6 +44,20 @@ describe('ProblemListService search + filter (BROWSE-03, BROWSE-04 difficulty)',
     expect(r.map((p) => p.id)).toEqual([1]);
   });
 
+  it('search matches the Chinese title (titleCn) when present', () => {
+    const cn: IndexedProblem[] = [
+      { id: 1, slug: 'two-sum', title: 'Two Sum', titleCn: '两数之和', diff: 'Easy', paid: false },
+      { id: 146, slug: 'lru-cache', title: 'LRU Cache', titleCn: 'LRU 缓存', diff: 'Medium', paid: false },
+      { id: 42, slug: 'trapping-rain-water', title: 'Trapping Rain Water', diff: 'Hard', paid: false },
+    ];
+    expect(svc.search(cn, '两数')).toEqual([cn[0]]);
+    expect(svc.search(cn, '缓存')).toEqual([cn[1]]);
+    // English still matches rows that carry a titleCn.
+    expect(svc.search(cn, 'two')).toEqual([cn[0]]);
+    // Rows without titleCn are unaffected.
+    expect(svc.search(cn, 'rain')).toEqual([cn[2]]);
+  });
+
   it('filter by single difficulty (Easy)', () => {
     const r = svc.filter(FIXTURE, { difficulty: ['Easy'] });
     expect(r.map((p) => p.id)).toEqual([1]);

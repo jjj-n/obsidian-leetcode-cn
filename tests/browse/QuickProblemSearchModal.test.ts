@@ -66,6 +66,17 @@ describe('filterProblems', () => {
     expect(out.map((x) => x.id)).toEqual([125]);
   });
 
+  it('matches the Chinese title (titleCn) and keeps English matching alongside', () => {
+    const cn: IndexedProblem[] = [
+      { id: 1, slug: 'two-sum', title: 'Two Sum', titleCn: '两数之和', diff: 'Easy', paid: false },
+      { id: 2, slug: 'add-two-numbers', title: 'Add Two Numbers', titleCn: '两数相加', diff: 'Medium', paid: false },
+      { id: 42, slug: 'trapping-rain-water', title: 'Trapping Rain Water', diff: 'Hard', paid: false },
+    ];
+    expect(filterProblems(cn, '两数').map((x) => x.id)).toEqual([1, 2]);
+    expect(filterProblems(cn, 'two').map((x) => x.id)).toEqual([1, 2]);
+    expect(filterProblems(cn, '两数之和').map((x) => x.id)).toEqual([1]);
+  });
+
   it('returns empty array when nothing matches', () => {
     const out = filterProblems(FIXTURE, 'no-such-problem-xyz');
     expect(out).toEqual([]);

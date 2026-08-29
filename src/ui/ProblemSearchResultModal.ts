@@ -9,15 +9,9 @@
 import { SuggestModal } from 'obsidian';
 import type { App } from 'obsidian';
 import type { CNProblemSearchHit } from '../api/LeetCodeCNAdapter';
+import { DIFFICULTY_CN } from '../browse/types';
 
 export const SEARCH_RESULT_LIMIT = 20;
-
-/** Chinese display label per difficulty — matches the note's 难度 vocabulary. */
-const DIFFICULTY_CN: Record<CNProblemSearchHit['difficulty'], string> = {
-  Easy: '简单',
-  Medium: '中等',
-  Hard: '困难',
-};
 
 /**
  * Rank search hits against a follow-up `query` typed inside the picker.

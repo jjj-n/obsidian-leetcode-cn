@@ -2,23 +2,32 @@
 //
 // JetBrains-style quick search for LeetCode problems. Backed by the in-memory
 // `IndexedProblem[]` already cached by ProblemListService — no network call on
-// the hot path. Two surfaces feed into this modal:
-//   1. Command palette entry `Quick search problems` (user-rebindable hotkey).
-//   2. Document-level double-shift detector in main.ts (`createShiftShiftDetector`).
+// the hot path. Intended entry points: command palette entry + the problem
+// browser's own search box (see ProblemBrowserView); not yet wired to a command.
 //
 // Filtering logic is factored into a pure `filterProblems` helper so it can be
 // unit-tested without instantiating a SuggestModal under happy-dom.
 import { App, SuggestModal } from 'obsidian';
+import { DIFFICULTY_CN, displayId, displayTitle } from './types';
 import type { IndexedProblem } from './types';
 
 export const QUICK_SEARCH_LIMIT = 50;
+
+/** True when the row matches `lowered` across its displayable text fields. */
+function textMatch(p: IndexedProblem, lowered: string): boolean {
+  return (
+    p.title.toLowerCase().includes(lowered) ||
+    (p.titleCn !== undefined && p.titleCn.toLowerCase().includes(lowered)) ||
+    p.slug.toLowerCase().includes(lowered)
+  );
+}
 
 /**
  * Rank problems against `query`. Empty/whitespace query returns the first
  * `limit` rows in their natural order (matches LC's "newest first" feel from
  * the browser view). Numeric queries prioritize exact-id then id-prefix
- * matches; otherwise we case-insensitive substring-match against
- * `${id}. ${title} ${slug}` and cap at `limit`.
+ * matches; otherwise we case-insensitive substring-match across title /
+ * titleCn / slug and cap at `limit`.
  */
 export function filterProblems(
   problems: readonly IndexedProblem[],
@@ -38,22 +47,14 @@ export function filterProblems(
     for (const p of problems) {
       if (p.id === numeric) exact.push(p);
       else if (String(p.id).startsWith(q)) prefix.push(p);
-      else if (
-        p.title.toLowerCase().includes(lowered) ||
-        p.slug.toLowerCase().includes(lowered)
-      ) {
-        rest.push(p);
-      }
+      else if (textMatch(p, lowered)) rest.push(p);
     }
     return [...exact, ...prefix, ...rest].slice(0, limit);
   }
 
   const out: IndexedProblem[] = [];
   for (const p of problems) {
-    if (
-      p.title.toLowerCase().includes(lowered) ||
-      p.slug.toLowerCase().includes(lowered)
-    ) {
+    if (textMatch(p, lowered)) {
       out.push(p);
       if (out.length === limit) break;
     }
@@ -68,11 +69,11 @@ export class QuickProblemSearchModal extends SuggestModal<IndexedProblem> {
     private readonly onChoose: (p: IndexedProblem) => void,
   ) {
     super(app);
-    this.setPlaceholder('Search by ID, title, or slug…');
+    this.setPlaceholder('搜索题号、题名或 slug…');
     this.emptyStateText =
       problems.length === 0
-        ? 'Open the LeetCode problem browser at least once to populate the index.'
-        : 'No matching problems.';
+        ? '题库索引为空——打开题目浏览器同步一次即可。'
+        : '没有匹配的题目。';
     this.limit = QUICK_SEARCH_LIMIT;
   }
 
@@ -83,13 +84,17 @@ export class QuickProblemSearchModal extends SuggestModal<IndexedProblem> {
   renderSuggestion(p: IndexedProblem, el: HTMLElement): void {
     el.addClass('lc-quick-search__item');
     const title = el.createDiv({ cls: 'lc-quick-search__title' });
-    title.createSpan({ cls: 'lc-quick-search__id', text: `${p.id}. ` });
-    title.createSpan({ cls: 'lc-quick-search__name', text: p.title });
+    title.createSpan({ cls: 'lc-quick-search__id', text: `${displayId(p)}. ` });
+    title.createSpan({ cls: 'lc-quick-search__name', text: displayTitle(p) });
     const meta = el.createDiv({ cls: 'lc-quick-search__meta' });
     meta.createSpan({
       cls: `lc-quick-search__diff lc-diff--${p.diff.toLowerCase()}`,
-      text: p.diff,
+      text: DIFFICULTY_CN[p.diff],
     });
+    if (p.titleCn && p.title !== p.titleCn) {
+      meta.createSpan({ cls: 'lc-quick-search__sep', text: ' · ' });
+      meta.createSpan({ cls: 'lc-quick-search__slug', text: p.title });
+    }
     meta.createSpan({ cls: 'lc-quick-search__sep', text: ' · ' });
     meta.createSpan({ cls: 'lc-quick-search__slug', text: p.slug });
   }

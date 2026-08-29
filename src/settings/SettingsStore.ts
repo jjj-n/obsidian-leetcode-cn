@@ -405,6 +405,8 @@ function isValidIndexedProblem(v: unknown): v is IndexedProblem {
     typeof p.id === 'number' &&
     typeof p.slug === 'string' &&
     typeof p.title === 'string' &&
+    (p.titleCn === undefined || typeof p.titleCn === 'string') &&
+    (p.frontendId === undefined || typeof p.frontendId === 'string') &&
     typeof p.diff === 'string' && VALID_DIFFICULTIES.has(p.diff) &&
     typeof p.paid === 'boolean' &&
     (p.status === undefined || (typeof p.status === 'string' && VALID_STATUSES.has(p.status))) &&
@@ -418,6 +420,9 @@ function isValidProblemIndex(v: unknown): v is ProblemIndex {
   if (!v || typeof v !== 'object') return false;
   const idx = v as Partial<ProblemIndex>;
   if (typeof idx.fetchedAt !== 'number' || !Array.isArray(idx.problems)) return false;
+  // Region tag optional (legacy caches) but must be a known region when present;
+  // a mismatch is handled by ProblemListService (treated as stale, re-fetched).
+  if (idx.region !== undefined && idx.region !== 'cn' && idx.region !== 'com') return false;
   return idx.problems.every(isValidIndexedProblem);
 }
 

@@ -70,8 +70,14 @@ export class ProblemListService {
     force: boolean,
     onProgress?: RefreshProgressCallback,
   ): Promise<IndexedProblem[]> {
+    const region = this.settings.getRegion();
     const cached = this.settings.getProblemIndex();
-    if (!force && cached && Date.now() - cached.fetchedAt < INDEX_TTL_MS) {
+    // Region check alongside the TTL: an index fetched from the OTHER site
+    // (cn ↔ com switch) describes a different problemset — treat it as stale
+    // even when chronologically fresh. Legacy caches without a region tag
+    // (undefined) never match, so they re-fetch exactly once and get tagged.
+    if (!force && cached && cached.region === region &&
+        Date.now() - cached.fetchedAt < INDEX_TTL_MS) {
       // Synthesize a single "done" progress tick so callers that rely on the
       // progress stream to drive UI state transitions (e.g. hide a progress bar)
       // still receive a terminal signal when we return cached data.
@@ -134,20 +140,24 @@ export class ProblemListService {
       if (isLast) break;
       offset += PAGE_SIZE;
     }
-    const index: ProblemIndex = { fetchedAt: Date.now(), problems: all };
+    const index: ProblemIndex = { fetchedAt: Date.now(), region, problems: all };
     await this.settings.setProblemIndex(index);
     return all;
   }
 
   /**
-   * BROWSE-03: case-insensitive title substring OR id-prefix match.
+   * BROWSE-03: case-insensitive substring match against the English title OR
+   * the Chinese title (titleCn) OR an id prefix — both scripts match so
+   * "两数" and "two su" both find 两数之和.
    * Empty / whitespace-only term → returns input unchanged (the view renders all rows).
    */
   search(idx: IndexedProblem[], term: string): IndexedProblem[] {
     const q = term.trim().toLowerCase();
     if (!q) return idx;
     return idx.filter((p) =>
-      p.title.toLowerCase().includes(q) || String(p.id).startsWith(q),
+      p.title.toLowerCase().includes(q) ||
+      (p.titleCn !== undefined && p.titleCn.toLowerCase().includes(q)) ||
+      String(p.id).startsWith(q),
     );
   }
 

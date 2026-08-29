@@ -36,9 +36,13 @@ function makeMockClient(pages: number[], total: number | null = null) {
   return { getProblemListPage };
 }
 
-function makeMockSettings(initial: ProblemIndex | null = null) {
+function makeMockSettings(
+  initial: ProblemIndex | null = null,
+  region: 'cn' | 'com' = 'cn',
+) {
   let index: ProblemIndex | null = initial;
   return {
+    getRegion: vi.fn(() => region),
     getProblemIndex: vi.fn(() => index),
     setProblemIndex: vi.fn(async (i: ProblemIndex) => { index = i; }),
   };
@@ -138,6 +142,7 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
   it('returns cached index when fresh (<24h) without calling network', async () => {
     const fresh: ProblemIndex = {
       fetchedAt: Date.now() - 1000,
+      region: 'cn',
       problems: [{ id: 1, slug: 'two-sum', title: 'Two Sum', diff: 'Easy', paid: false }],
     };
     const client = makeMockClient([50]);
@@ -147,6 +152,39 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
 
     expect(result).toEqual(fresh.problems);
     expect(client.getProblemListPage).toHaveBeenCalledTimes(0);
+  });
+
+  it('treats a chronologically-fresh cache from the OTHER region as stale', async () => {
+    // cn ↔ com switch: the cached index describes a different problemset —
+    // must re-fetch even though fetchedAt is 1s ago.
+    const foreign: ProblemIndex = {
+      fetchedAt: Date.now() - 1000,
+      region: 'com',
+      problems: [{ id: 999, slug: 'com-only', title: 'Com Only', diff: 'Easy', paid: false }],
+    };
+    const client = makeMockClient([3]);
+    const settings = makeMockSettings(foreign, 'cn');
+    const svc = new ProblemListService(client as never, settings as never);
+    const result = await svc.refresh(false);
+
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(3);
+  });
+
+  it('treats a legacy cache without a region tag as stale, then tags the fresh index', async () => {
+    const legacy: ProblemIndex = {
+      fetchedAt: Date.now() - 1000,
+      problems: [{ id: 1, slug: 'two-sum', title: 'Two Sum', diff: 'Easy', paid: false }],
+    };
+    const client = makeMockClient([3]);
+    const settings = makeMockSettings(legacy, 'cn');
+    const svc = new ProblemListService(client as never, settings as never);
+    await svc.refresh(false);
+
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(1);
+    expect(settings.setProblemIndex).toHaveBeenCalledWith(
+      expect.objectContaining({ region: 'cn' }),
+    );
   });
 
   it('re-fetches when cache is stale (>24h)', async () => {

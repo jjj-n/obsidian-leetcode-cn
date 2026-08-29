@@ -31,5 +31,31 @@ export interface IndexedProblem {
 
 export interface ProblemIndex {
   fetchedAt: number;
+  /** Region the index was fetched from. Kept as a literal union (not
+   *  LeetCodeRegion) because SettingsStore already imports this module — a
+   *  reverse import would create a cycle. Optional: legacy caches (pre-region
+   *  tagging) lack it — readers treat absence as a mismatch (stale, re-fetch). */
+  region?: 'cn' | 'com';
   problems: IndexedProblem[];
+}
+
+/** Chinese display label per difficulty — the plugin-wide 难度 vocabulary
+ *  (notes' frontmatter, search pickers, and the problem browser all share it). */
+export const DIFFICULTY_CN: Record<'Easy' | 'Medium' | 'Hard', string> = {
+  Easy: '简单',
+  Medium: '中等',
+  Hard: '困难',
+};
+
+/** The title a user-facing row should display: Chinese first, English fallback.
+ *  Matches NoteWriter's note-filename precedence (titleCn ?? title) so the row
+ *  label equals the note file the click opens. */
+export function displayTitle(p: IndexedProblem): string {
+  return p.titleCn && p.titleCn.length > 0 ? p.titleCn : p.title;
+}
+
+/** The display id of a row: verbatim frontendId when present (handles
+ *  "LCR 007" / "面试题 17.09" whose numeric parse is NaN), else the numeric id. */
+export function displayId(p: IndexedProblem): string {
+  return p.frontendId ?? String(p.id);
 }
