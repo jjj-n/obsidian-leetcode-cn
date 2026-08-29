@@ -152,38 +152,7 @@ describe('SettingsStore.load — untrusted-disk validation (CR-02 / WR-04)', () 
   });
 });
 
-describe('SettingsStore — Phase 4 backward-compat (GRAPH-05, D-12, D-15, D-21)', () => {
-  it('autoBacklinksEnabled defaults true when absent from data.json', async () => {
-    // Pitfall 9: pre-Phase-4 data.json has no `autoBacklinksEnabled` key.
-    // Must fall back to default `true` (D-21 — headline value is on).
-    const plugin = makeMockPlugin({
-      version: 1,
-      auth: { LEETCODE_SESSION: 'X', csrftoken: 'Y' },
-      problemsFolder: 'LeetCode',
-    });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getAutoBacklinksEnabled()).toBe(true);
-  });
-
-  it('autoBacklinksEnabled shape-guard rejects non-boolean', async () => {
-    // T-04-02-02 threat mitigation: malicious non-boolean → default true.
-    const plugin = makeMockPlugin({
-      version: 1,
-      autoBacklinksEnabled: 'yes',  // malformed
-    });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getAutoBacklinksEnabled()).toBe(true);
-  });
-
-  it('autoBacklinksEnabled round-trip: setter persists false', async () => {
-    const plugin = makeMockPlugin(null);
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getAutoBacklinksEnabled()).toBe(true);
-    await s.setAutoBacklinksEnabled(false);
-    expect(s.getAutoBacklinksEnabled()).toBe(false);
-    expect(plugin.saveData).toHaveBeenCalled();
-  });
-
+describe('SettingsStore — DetailCacheEntry backward-compat (GRAPH-05, D-12, D-15)', () => {
   it('DetailCacheEntry.topicTags optional on old entries', async () => {
     // Pitfall 10: Phase 2-era entries with topicSlugs but no topicTags
     // remain VALID; the field is optional/undefined post-load.
@@ -254,97 +223,5 @@ describe('SettingsStore — Phase 4 backward-compat (GRAPH-05, D-12, D-15, D-21)
       { name: 'Hash Table', slug: 'hash-table' },
       { name: 'Array', slug: 'array' },
     ]);
-  });
-
-  it('getTechniquesFolder derives from problemsFolder', async () => {
-    // D-15 derived getter — no new settings field. Respects the
-    // sanitizeFolder no-trailing-slash invariant (Phase 1 D-10).
-    const plugin = makeMockPlugin({ version: 1, problemsFolder: 'LeetCode' });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getTechniquesFolder()).toBe('LeetCode/Techniques');
-
-    const plugin2 = makeMockPlugin({ version: 1, problemsFolder: 'my notes/leetcode' });
-    const s2 = await SettingsStore.load(plugin2 as never);
-    expect(s2.getTechniquesFolder()).toBe('my notes/leetcode/Techniques');
-  });
-});
-
-describe('SettingsStore — techniquesFolderOverride round-trip (Phase 5 POLISH-01 D-15)', () => {
-  it('defaults to empty string when field absent (pre-Phase-5 data.json)', async () => {
-    // A pre-Phase-5 data.json has no `techniquesFolderOverride` key. Must fall
-    // back to '' so getTechniquesFolder() uses the derived default and Phase 4
-    // users see no behavior change.
-    const plugin = makeMockPlugin({ version: 1, problemsFolder: 'LeetCode' });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getTechniquesFolderOverride()).toBe('');
-  });
-
-  it('shape-guard coerces non-string raw to empty string', async () => {
-    // T-05-02-01 threat mitigation — malicious data.json with non-string
-    // override (object, number, null) reverts to '' (= derived default).
-    const pluginObj = makeMockPlugin({
-      version: 1,
-      problemsFolder: 'LeetCode',
-      techniquesFolderOverride: { evil: 'obj' } as unknown,
-    });
-    const sObj = await SettingsStore.load(pluginObj as never);
-    expect(sObj.getTechniquesFolderOverride()).toBe('');
-
-    const pluginNum = makeMockPlugin({
-      version: 1,
-      problemsFolder: 'LeetCode',
-      techniquesFolderOverride: 42 as unknown,
-    });
-    const sNum = await SettingsStore.load(pluginNum as never);
-    expect(sNum.getTechniquesFolderOverride()).toBe('');
-
-    const pluginNull = makeMockPlugin({
-      version: 1,
-      problemsFolder: 'LeetCode',
-      techniquesFolderOverride: null as unknown,
-    });
-    const sNull = await SettingsStore.load(pluginNull as never);
-    expect(sNull.getTechniquesFolderOverride()).toBe('');
-  });
-
-  it('setTechniquesFolderOverride persists via saveData round-trip', async () => {
-    const plugin = makeMockPlugin(null);
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getTechniquesFolderOverride()).toBe('');
-    await s.setTechniquesFolderOverride('Library/LC Techniques');
-    expect(s.getTechniquesFolderOverride()).toBe('Library/LC Techniques');
-    expect(plugin.saveData).toHaveBeenCalled();
-  });
-
-  it('getTechniquesFolder returns override verbatim when non-empty', async () => {
-    // D-15 — override takes precedence over the derived default.
-    const plugin = makeMockPlugin({
-      version: 1,
-      problemsFolder: 'LeetCode',
-      techniquesFolderOverride: 'Library/LC Techniques',
-    });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getTechniquesFolder()).toBe('Library/LC Techniques');
-  });
-
-  it('getTechniquesFolder returns derived default when override is empty', async () => {
-    // D-15 — empty override string = use `{problemsFolder}/Techniques`.
-    const plugin = makeMockPlugin({
-      version: 1,
-      problemsFolder: 'LeetCode',
-      techniquesFolderOverride: '',
-    });
-    const s = await SettingsStore.load(plugin as never);
-    expect(s.getTechniquesFolder()).toBe('LeetCode/Techniques');
-  });
-
-  it('setter accepts raw input without stripping (UI layer owns sanitization)', async () => {
-    // Phase 4 convention: sanitization lives in the UI onChange handler.
-    // Setter round-trips raw input verbatim so the UI can evolve without
-    // double-stripping in the store.
-    const plugin = makeMockPlugin(null);
-    const s = await SettingsStore.load(plugin as never);
-    await s.setTechniquesFolderOverride('custom/path');
-    expect(s.getTechniquesFolderOverride()).toBe('custom/path');
   });
 });

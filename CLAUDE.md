@@ -62,12 +62,13 @@
 
 ## 测试
 
-- vitest，530 个用例；`npm test` 约 15s
+- vitest，460 个用例；`npm test` 约 15s
 - `tests/fixtures/`：真实 LC 题面 HTML 样本（two-sum、median、valid-number、regex）+ GraphQL 响应样本
 - `htmlToMarkdown` 有确定性 snapshot 测试——改动转换管道时先跑 `tests/htmlToMarkdown-snapshots.test.ts` 看差异再决定是否更新快照
 - 已知测试日志噪音：`cache-ttl.test.ts` 会故意打印 `getRegion is not a function` 被吞掉的 TypeError——那是 mock 缺方法以验证"后台刷新失败静默"的预期行为，不是 bug
 
 ## 已知技术债（按清理优先级）
 
-1. 设置面板的孤儿 UI 已删除（`AI coach` / `Knowledge graph` 分区与 `Click behavior` 选项，中文界面重写时移除）；`SettingsStore` 的 contest / widget 时代字段（`indentSizeOverride`、`showRelativeLineNumbers`、`autoMigrateOnOpen`、`aiCostLedger`、`contest*`、`previewClickBehavior`、`techniquesFolder*`、`autoBacklinks*`、`activeAIProvider`、`providerConfigs`）仍在 data.json 中持久化——**全部在为已删除的功能做配置**，待清理。涉及 `data.json` 向后兼容决策（建议：读取时容忍、写出时丢弃）
-2. `styles.css`（86 KB）含 widget 时代 CSS，待逐类审计瘦身（题目浏览器本轮已复用 `.leetcode-browser` 区样式并新增 chips，其余未审计）
+1. `styles.css`（86 KB）含 widget 时代 CSS，待逐类审计瘦身（题目浏览器已复用 `.leetcode-browser` 区样式并新增 chips，其余未审计）
+
+已清偿：~~SettingsStore 孤儿字段~~（2026-08 完成：`indentSizeOverride`、`showRelativeLineNumbers`、`autoMigrateOnOpen`、`widgetSyncDebounceMs`、`autoBacklinksEnabled`、`techniquesFolderOverride`、`previewClickBehavior`、`activeAIProvider`、`providerConfigs`、`aiCostLedger`、`autoAIReviewOnAC`、`contestSession`、`autoAIContestAnalysis`、`contestIndex`、`autoAIKnowledgeGraph`、`featureFlags`、`legacyBaseNoticeShown` 及全部守卫/getter/伴生测试已删；策略为**读取容忍、写出丢弃**——老 data.json 里的这些键在 load 时被忽略，下次 persist 自然消失。同批清理了 LeetCodeClient 的 contest/AI 死方法与 logger 的 Bedrock 脱敏规则）

@@ -6,7 +6,6 @@
 // (AuthService) and Plan 06 (ProblemBrowserView) both call it from error paths.
 // Neither redefines it.
 import { LeetCodeAdvanced, LeetCodeCN, Credential, CredentialCN } from '@leetnotion/leetcode-api';
-import type { PastContests, ContestQuestions } from '@leetnotion/leetcode-api';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { fetchCNProblemDetail, fetchCNProblemSearch, fetchCNProblemListPage } from './LeetCodeCNAdapter';
 
@@ -113,29 +112,6 @@ export class LeetCodeClient {
     }
   }
 
-  /** Fetch the signed-in user's username via LC's `whoami` GraphQL query.
-   *  Returns null if not signed in or if the call fails. Never throws — callers
-   *  use the result for UI display only (settings tab Status line). */
-  async fetchUsername(): Promise<string | null> {
-    try {
-      if (this.settings.getRegion() === 'cn') {
-        const resp = await this.lcCN.graphql({
-          query: 'query { userStatus { isSignedIn username } }',
-        }) as { data?: { userStatus?: { isSignedIn?: boolean; username?: string } } };
-        const u = resp?.data?.userStatus;
-        if (!u || !u.isSignedIn || !u.username) return null;
-        return u.username;
-      }
-      const resp = await (this.lc as unknown as {
-        whoami: () => Promise<{ username?: string; isSignedIn?: boolean } | null>;
-      }).whoami();
-      if (!resp || !resp.isSignedIn || !resp.username) return null;
-      return resp.username;
-    } catch {
-      return null;
-    }
-  }
-
   /** Fetch the signed-in user's username + premium status in a single whoami
    *  round-trip. Returns null if not signed in or on error. */
   async fetchWhoami(): Promise<{ username: string; isPremium: boolean | null } | null> {
@@ -239,21 +215,6 @@ export class LeetCodeClient {
     return { questions, total: typeof page.total === 'number' ? page.total : null };
   }
 
-  /** Phase 10 CONTEST-01 — fetch past contests with pagination support.
-   *  Delegates to LeetCodeAdvanced.getPastContests which returns { totalNum, contests[] }. */
-  async getPastContests(opts?: { limit?: number; skip?: number }): Promise<PastContests> {
-    return this.lc.getPastContests(opts ?? {});
-  }
-
-  /** Phase 10 CONTEST-04 — fetch contest questions for a given contest slug.
-   *  Validates slug format (T-10-01 threat mitigation) before passing to the API. */
-  async getContestQuestions(contestSlug: string): Promise<ContestQuestions> {
-    // T-10-01: validate slug matches expected pattern before interpolation.
-    if (!/^(weekly|biweekly)-contest-\d+$/.test(contestSlug)) {
-      throw new Error(`Invalid contest slug format: ${contestSlug}`);
-    }
-    return this.lc.getContestQuestions(contestSlug);
-  }
 }
 
 /**

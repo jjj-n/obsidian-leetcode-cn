@@ -13,20 +13,9 @@
 // api-key, x-api-key) and Authorization-header tokens (bearer, authorization).
 // `api[_-]?key` covers all four common spellings; the case-insensitive flag
 // also handles camelCase (apiKey, ApiKey, APIKEY). Old v1.0 tokens stay in
-// the same order so existing logger-redact tests remain green.
-//
-// Phase 08.1 Plan 02 (T-08.1-02) — extended for AWS Bedrock secret fields:
-//   - accesskeyid           — covers BedrockProviderConfig.accessKeyId
-//   - secretaccesskey       — covers BedrockProviderConfig.secretAccessKey
-//   - aws_session_token     — env var / INI key form
-//   - bedrockapikey         — covers BedrockProviderConfig.bedrockApiKey
-//   - sso_?profile          — covers BedrockProviderConfig.ssoProfile (no
-//                             secret value — but the profile NAME may
-//                             reveal customer / project identity, so we
-//                             redact the field-name match conservatively)
-// The case-insensitive `/i` flag handles camelCase (`accessKeyId`) AND
-// snake_case (`aws_access_key_id`) AND uppercase env-var form.
-const REDACT = /session|csrf|cookie|token|apikey|api[_-]?key|bearer|authorization|accesskeyid|secretaccesskey|aws_access_key_id|aws_secret_access_key|aws_session_token|aws_bearer_token_bedrock|bedrockapikey|sso_?profile/i;
+// the same order so existing logger-redact tests remain green. Kept as a
+// defensive rule even though the AI feature is deferred to v2.
+const REDACT = /session|csrf|cookie|token|apikey|api[_-]?key|bearer|authorization/i;
 // Value-level redaction pattern: auth-ish kv pairs embedded in error messages,
 // stack traces, or config/request/response strings. e.g. "LEETCODE_SESSION=xyz"
 // or "Cookie: csrftoken=abc". We redact the value while keeping the key visible
@@ -78,15 +67,8 @@ const REDACT = /session|csrf|cookie|token|apikey|api[_-]?key|bearer|authorizatio
 //
 // `s` flag NOT set — we do not want `.` to cross newlines; the pattern
 // should match within a single header line.
-// Phase 08.1 Plan 02 (T-08.1-02) — extended second alternation with AWS /
-// Bedrock secret-bearing key names so embedded `key=value` pairs in error
-// messages or stringified configs are redacted at the value layer. Same
-// alternation order rules as the v1 set: longer / more specific patterns
-// before bare alternates. The `bearer`-first alternate (auth header) is
-// preserved verbatim — it must remain BEFORE any alternate that could
-// re-consume the redacted token (CR-01 Plan 07-07 invariant).
 const SECRET_VALUE_PATTERN =
-  /\b(authorization)\s*:\s*(bearer)\s+([^\s;,"'&}\][]+)|\b(LEETCODE_SESSION|csrftoken|session|csrf|cookie|token|authorization|apikey|api[_-]?key|x-api-key|aws_access_key_id|aws_secret_access_key|aws_session_token|aws_bearer_token_bedrock|accesskeyid|secretaccesskey|bedrockapikey)(\s*[=:]\s*)(?!bearer\b)([^\s;,"'&}\][]+)/gi;
+  /\b(authorization)\s*:\s*(bearer)\s+([^\s;,"'&}\][]+)|\b(LEETCODE_SESSION|csrftoken|session|csrf|cookie|token|authorization|apikey|api[_-]?key|x-api-key)(\s*[=:]\s*)(?!bearer\b)([^\s;,"'&}\][]+)/gi;
 
 function redactString(s: string): string {
   // Single-pass ordered-alternation redaction — see the doc comment above
