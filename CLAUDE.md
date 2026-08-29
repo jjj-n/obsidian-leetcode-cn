@@ -69,6 +69,6 @@
 
 ## 已知技术债（按清理优先级）
 
-1. `styles.css`（86 KB）含 widget 时代 CSS，待逐类审计瘦身（题目浏览器已复用 `.leetcode-browser` 区样式并新增 chips，其余未审计）
+（无——styles.css 已于 2026-08 瘦身完成：86 KB → 18 KB，按类名与 `src/` 引用交叉比对删除全部 widget/AI/contest 时代死样式，仅保留题目浏览器、筛选弹窗、快速搜索、设置面板四个作用域。）
 
 已清偿：~~SettingsStore 孤儿字段~~（2026-08 完成：`indentSizeOverride`、`showRelativeLineNumbers`、`autoMigrateOnOpen`、`widgetSyncDebounceMs`、`autoBacklinksEnabled`、`techniquesFolderOverride`、`previewClickBehavior`、`activeAIProvider`、`providerConfigs`、`aiCostLedger`、`autoAIReviewOnAC`、`contestSession`、`autoAIContestAnalysis`、`contestIndex`、`autoAIKnowledgeGraph`、`featureFlags`、`legacyBaseNoticeShown` 及全部守卫/getter/伴生测试已删；策略为**读取容忍、写出丢弃**——老 data.json 里的这些键在 load 时被忽略，下次 persist 自然消失。同批清理了 LeetCodeClient 的 contest/AI 死方法与 logger 的 Bedrock 脱敏规则）
