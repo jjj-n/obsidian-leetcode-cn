@@ -1,24 +1,13 @@
 // tests/browse/FilterModal.test.ts
 //
-// Phase 5.2 Wave 0 — RED until 05.2-03 (FilterModal D-02 / D-03 / D-04).
-//
-// Covers three Wave-1 behavior changes:
+// Contract checks for the compound filter modal (wave-1 changes, implemented):
 //   - D-02: `language` entry removed from the field-selector — DEFERRED_STUB_FIELDS
-//           must be empty (or the symbol deleted entirely). The Language row no
-//           longer appears in the modal.
-//   - D-03: `premium` value-editor becomes a multi-select (checkbox popover)
-//           instead of the current single-value chevron picker.
+//           is empty (or the symbol deleted entirely).
+//   - D-03: `premium` value-editor is the shared multi-select (checkbox
+//           popover), not a dedicated single-value picker.
 //   - D-04: the Apply handler strips any `__autoDefault: true` marker from
 //           rules before handing them to `onApply`, so the persisted filter
 //           only carries user-intent rules.
-//
-// All three tests are currently `it.skip` because:
-//   - FIELD_DEFS / DEFERRED_STUB_FIELDS are not exported from FilterModal.ts
-//     yet (D-02 surfaces them during the Wave 1 rewrite).
-//   - The `__autoDefault` marker is a Wave 1 schema addition; FilterRule in
-//     main today carries no such field.
-// Plan 05.2-03 will unskip these tests as part of the implementation and
-// adjust imports to reference the newly-exported surfaces.
 
 import { describe, it, expect, vi } from 'vitest';
 
@@ -27,13 +16,10 @@ vi.mock('obsidian', async () => {
   return actual;
 });
 
-describe('FilterModal Wave 0 shells (RED until 05.2-03)', () => {
-  // D-02 — field selector no longer lists Language. The current production
-  // code owns a `DEFERRED_STUB_FIELDS` array with a single `language` entry
-  // rendered as a disabled stub row. Wave 1 deletes the array entirely (or
-  // empties it) AND removes the render loop call site. This test asserts the
-  // end state: either no export at all, OR an empty array.
-  it('D-02: field selector menu does not list Language option (TODO(05.2-03): export DEFERRED_STUB_FIELDS + empty it)', async () => {
+describe('FilterModal wave-1 contracts', () => {
+  // D-02 — field selector no longer lists Language: DEFERRED_STUB_FIELDS is
+  // either not exported at all, or exported as an empty array.
+  it('D-02: field selector menu does not list Language option', async () => {
     const mod = (await import('../../src/browse/FilterModal')) as unknown as {
       DEFERRED_STUB_FIELDS?: unknown[];
     };
@@ -47,12 +33,9 @@ describe('FilterModal Wave 0 shells (RED until 05.2-03)', () => {
     }
   });
 
-  // D-03 — premium field becomes multi-value. The current production code
-  // renders `renderPremiumEditor` (single-value chevron) for premium rules;
-  // Wave 1 deletes that method so `renderValueEditor` falls through to
-  // `renderMultiSelect` (the same path Status / Difficulty use today). We
-  // assert the method is absent post-refactor.
-  it('D-03: renderPremiumEditor deleted — premium uses multi-select (TODO(05.2-03): delete renderPremiumEditor in FilterModal.ts)', async () => {
+  // D-03 — premium field is multi-value: renderPremiumEditor must not exist
+  // (renderMultiSelect is the shared entry point for status/difficulty/topics).
+  it('D-03: renderPremiumEditor deleted — premium uses multi-select', async () => {
     const mod = (await import('../../src/browse/FilterModal')) as unknown as {
       FilterModal: new (...args: unknown[]) => unknown;
     };
@@ -64,23 +47,14 @@ describe('FilterModal Wave 0 shells (RED until 05.2-03)', () => {
     expect(typeof proto.renderMultiSelect).toBe('function');
   });
 
-  // D-04 — Apply handler strips `__autoDefault` markers. Wave 1 marks the
-  // first-open default (`premium: non-premium` when isPremium === false) with
-  // `__autoDefault: true` so `updateFilterBadge` can exclude it from the count.
-  // On Apply the marker is stripped before passing to `onApply` so the
-  // persisted filter only contains user-intent rules.
-  it('D-04: Apply strips __autoDefault markers from draft rules (TODO(05.2-03): add marker stripping in applyBtn click)', async () => {
-    // Target invariant (Wave 1): applyBtn click → the rule passed to onApply
-    // does NOT carry a `__autoDefault` property even if the draft rule did.
-    // Wave 1 plan will expose a pure helper `stripAutoDefaults(rules)` that
-    // this test invokes directly; expressing intent as the invariant here so
-    // the test is unskipped against the real helper without re-plumbing.
+  // D-04 — Apply strips `__autoDefault` markers so the persisted filter only
+  // contains user-intent rules.
+  it('D-04: Apply strips __autoDefault markers from draft rules', async () => {
     const mod = (await import('../../src/browse/FilterModal')) as unknown as {
       stripAutoDefaults?: (rules: unknown[]) => unknown[];
     };
     if (typeof mod.stripAutoDefaults !== 'function') {
-      // Helper not yet extracted — Wave 1 will add it (see plan 05.2-03 §Action).
-      throw new Error('stripAutoDefaults helper missing — 05.2-03 must export it');
+      throw new Error('stripAutoDefaults helper missing — FilterModal must export it');
     }
     const draft = [
       { field: 'premium', op: 'is', values: ['non-premium'], __autoDefault: true },

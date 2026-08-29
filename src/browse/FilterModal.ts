@@ -3,9 +3,9 @@
 // filter icon. Produces a CompoundFilter value which is persisted via
 // SettingsStore.setFilter() and applied via ProblemListService.applyCompoundFilter().
 //
-// Fields supported today: Status, Difficulty, Topics, Question ID range,
-// Acceptance range, Premium. Language / Last Submit / Published are deferred
-// (see .planning/phases/01-plugin-foundation/DEFERRED-FILTERS.md).
+// Fields supported today: 状态 (Status), 难度 (Difficulty), 标签 (Topics), 题号
+// (Question ID) range, 通过率 (Acceptance) range, 会员题 (Premium). Language /
+// Last Submit / Published are deferred indefinitely.
 import { App, Modal, setIcon, Notice } from 'obsidian';
 import type { CompoundFilter, FilterRule } from '../settings/SettingsStore';
 
@@ -22,51 +22,48 @@ const FIELD_DEFS: FieldDef[] = [
   // Icon choices mirror LC's own iconography (see user-provided screenshots).
   // `gauge` gives the speedometer used for Difficulty. Icons without a direct
   // Lucide match use the closest available primitive.
-  { key: 'status',      label: 'Status',      icon: 'check-square',
+  { key: 'status',      label: '状态',   icon: 'check-square',
     blank: () => ({ field: 'status', op: 'is', values: [] }) },
-  { key: 'difficulty',  label: 'Difficulty',  icon: 'gauge',
+  { key: 'difficulty',  label: '难度',   icon: 'gauge',
     blank: () => ({ field: 'difficulty', op: 'is', values: [] }) },
-  { key: 'topics',      label: 'Topics',      icon: 'tag',
+  { key: 'topics',      label: '标签',   icon: 'tag',
     blank: () => ({ field: 'topics', op: 'is', values: [] }) },
-  { key: 'question-id', label: 'Question ID', icon: 'list-ordered',
+  { key: 'question-id', label: '题号',   icon: 'list-ordered',
     blank: () => ({ field: 'question-id', op: 'range', min: null, max: null }) },
-  { key: 'acceptance',  label: 'Acceptance',  icon: 'cloud',
+  { key: 'acceptance',  label: '通过率', icon: 'cloud',
     blank: () => ({ field: 'acceptance', op: 'range', min: null, max: null }) },
-  { key: 'premium',     label: 'Premium',     icon: 'crown',
-    // Phase 5.2 D-03 — premium now uses the multi-value shape shared with
+  { key: 'premium',     label: '会员题', icon: 'crown',
+    // Phase 5.2 D-03 — premium uses the multi-value shape shared with
     // status/difficulty/topics. blank rule starts with no values selected.
     blank: () => ({ field: 'premium', op: 'is', values: [] }) },
 ];
 
 /** Filter fields pre-populated when the modal opens empty (matches LC's
  *  starting layout — Status, Difficulty, Topics are visible rows even before
- *  the user adds anything). Language is shown too but rendered as a disabled
- *  stub since per-problem language data is deferred to Phase 3
- *  (see .planning/phases/01-plugin-foundation/DEFERRED-FILTERS.md). */
+ *  the user adds anything). */
 const PREPOPULATED_FIELDS: FilterRule['field'][] = ['status', 'difficulty', 'topics'];
 /** Deferred fields shown as visible-but-disabled rows to match LC's layout.
- *  Phase 5.2 D-02 — the Language entry was removed per user feedback during
- *  Phase 5.1 live smoke (per-problem language filtering is deferred indefinitely
- *  since language isn't a property of a problem in LC's data model). Exported
- *  so tests can assert the list is empty (D-02 RED shell in
+ *  Empty since Phase 5.2 D-02 (per-problem language filtering is deferred
+ *  indefinitely — language isn't a property of a problem in LC's data model).
+ *  Exported so tests can assert the list is empty (D-02 shell in
  *  tests/browse/FilterModal.test.ts). */
 export const DEFERRED_STUB_FIELDS: { key: string; label: string; icon: string; reason: string }[] = [];
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'untouched', label: 'Todo' },
-  { value: 'attempted', label: 'Attempted' },
-  { value: 'solved',    label: 'Solved' },
+  { value: 'untouched', label: '未开始' },
+  { value: 'attempted', label: '尝试过' },
+  { value: 'solved',    label: '已解决' },
 ];
 
 const DIFFICULTY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Easy',   label: 'Easy' },
-  { value: 'Medium', label: 'Medium' },
-  { value: 'Hard',   label: 'Hard' },
+  { value: 'Easy',   label: '简单' },
+  { value: 'Medium', label: '中等' },
+  { value: 'Hard',   label: '困难' },
 ];
 
 const PREMIUM_OPTIONS: { value: 'premium' | 'non-premium'; label: string }[] = [
-  { value: 'premium',     label: 'Premium Content' },
-  { value: 'non-premium', label: 'Non-Premium Content' },
+  { value: 'premium',     label: '会员题' },
+  { value: 'non-premium', label: '免费题' },
 ];
 
 /** Turn a topic slug ('hash-table') into a display label ('Hash Table'). */
@@ -142,16 +139,16 @@ export class FilterModal extends Modal {
 
   private renderMatchHeader(parent: HTMLElement): void {
     const wrap = parent.createDiv({ cls: 'lc-fm__match' });
-    wrap.createSpan({ text: 'Match ' });
-    // Chevron picker for All/Any so it looks like the value pickers below,
+    wrap.createSpan({ text: '匹配' });
+    // Chevron picker for 全部/任一 so it looks like the value pickers below,
     // matching LC's uniform "everything is a dropdown" aesthetic.
     this.renderChevronSingleSelect(wrap, [
-      { value: 'all', label: 'All' },
-      { value: 'any', label: 'Any' },
+      { value: 'all', label: '全部' },
+      { value: 'any', label: '任一' },
     ], this.draft.match, (next) => {
       this.draft.match = next as 'all' | 'any';
     });
-    wrap.createSpan({ text: ' of the following filters:' });
+    wrap.createSpan({ text: ' 以下筛选条件：' });
   }
 
   /** Small single-select chevron picker for fixed-option fields like
@@ -240,7 +237,7 @@ export class FilterModal extends Modal {
     this.renderValueEditor(row, rule, idx);
 
     // Remove button
-    const rm = row.createDiv({ cls: 'lc-fm__rule-rm', attr: { 'aria-label': 'Remove rule' } });
+    const rm = row.createDiv({ cls: 'lc-fm__rule-rm', attr: { 'aria-label': '删除规则' } });
     setIcon(rm, 'minus');
     rm.addEventListener('click', () => {
       this.draft.rules.splice(idx, 1);
@@ -251,22 +248,18 @@ export class FilterModal extends Modal {
   private renderOperator(row: HTMLElement, rule: FilterRule, _idx: number): void {
     const cell = row.createDiv({ cls: 'lc-fm__rule-op' });
     if (rule.field === 'question-id' || rule.field === 'acceptance') {
-      cell.setText('Range');
+      cell.setText('范围');
       return;
     }
     if (rule.field === 'premium') {
-      // Phase 06 FOUND-01 — sentence-case rule (0.3.0) requires capitalized
-      // first letter for UI text rendered via `setText`. The chevron picker
-      // labels below stay lowercase because they're handled inside the
-      // chevron component (which the rule does not currently recurse into).
-      cell.setText('Is');
+      cell.setText('是');
       return;
     }
     // status / difficulty / topics → is / is-not chevron picker (matches the
     // other dropdowns in the modal; no native select chrome).
     this.renderChevronSingleSelect(cell, [
-      { value: 'is',     label: 'is' },
-      { value: 'is-not', label: 'is not' },
+      { value: 'is',     label: '是' },
+      { value: 'is-not', label: '不是' },
     ], rule.op, (next) => {
       if (rule.field === 'status' || rule.field === 'difficulty' || rule.field === 'topics') {
         rule.op = next as 'is' | 'is-not';
@@ -286,7 +279,7 @@ export class FilterModal extends Modal {
       case 'topics': {
         const topicOpts = this.topicSlugs.map((s) => ({ value: s, label: formatTopicLabel(s) }));
         if (topicOpts.length === 0) {
-          cell.createSpan({ text: '(load problems first)', cls: 'lc-fm__empty-hint' });
+          cell.createSpan({ text: '（先同步题库）', cls: 'lc-fm__empty-hint' });
         } else {
           this.renderMultiSelect(cell, rule, topicOpts);
         }
@@ -399,7 +392,7 @@ export class FilterModal extends Modal {
   ): void {
     const wrap = parent.createDiv({ cls: 'lc-fm__range' });
     const minInput = wrap.createEl('input', {
-      attr: { type: 'number', placeholder: `min${suffix}`, 'aria-label': 'Minimum' },
+      attr: { type: 'number', placeholder: `最小${suffix}`, 'aria-label': '最小值' },
     });
     if (rule.min !== null) minInput.value = String(rule.min);
     minInput.addEventListener('input', () => {
@@ -407,7 +400,7 @@ export class FilterModal extends Modal {
     });
     wrap.createSpan({ text: ' – ', cls: 'lc-fm__range-sep' });
     const maxInput = wrap.createEl('input', {
-      attr: { type: 'number', placeholder: `max${suffix}`, 'aria-label': 'Maximum' },
+      attr: { type: 'number', placeholder: `最大${suffix}`, 'aria-label': '最大值' },
     });
     if (rule.max !== null) maxInput.value = String(rule.max);
     maxInput.addEventListener('input', () => {
@@ -422,7 +415,7 @@ export class FilterModal extends Modal {
 
   private renderAddButton(parent: HTMLElement): void {
     const wrap = parent.createDiv({ cls: 'lc-fm__add' });
-    const btn = wrap.createDiv({ cls: 'lc-fm__add-btn', attr: { 'aria-label': 'Add filter rule' } });
+    const btn = wrap.createDiv({ cls: 'lc-fm__add-btn', attr: { 'aria-label': '添加筛选规则' } });
     setIcon(btn, 'plus');
     btn.addEventListener('click', () => {
       // Offer a picker of field types not yet used (LC allows duplicates, but
@@ -430,7 +423,7 @@ export class FilterModal extends Modal {
       const used = new Set(this.draft.rules.map((r) => r.field));
       const available = FIELD_DEFS.filter((d) => !used.has(d.key));
       if (available.length === 0) {
-        new Notice('All filter fields are in use.', 3000);
+        new Notice('所有筛选字段都已使用。', 3000);
         return;
       }
       this.openAddMenu(btn, available);
@@ -477,18 +470,18 @@ export class FilterModal extends Modal {
     // Save as Smart List — stubbed; disabled with tooltip.
     const saveBtn = footer.createEl('button', {
       cls: 'lc-fm__save',
-      attr: { disabled: 'true', title: 'Smart lists coming in a future release' },
+      attr: { disabled: 'true', title: '智能列表将在未来版本提供' },
     });
     const saveIc = saveBtn.createSpan({ cls: 'lc-fm__save-icon' });
     setIcon(saveIc, 'bookmark-plus');
-    saveBtn.createSpan({ text: 'Save as Smart List' });
+    saveBtn.createSpan({ text: '保存为智能列表' });
 
     const rightGroup = footer.createDiv({ cls: 'lc-fm__footer-right' });
 
     const resetBtn = rightGroup.createEl('button', { cls: 'lc-fm__reset' });
     const resetIc = resetBtn.createSpan({ cls: 'lc-fm__reset-icon' });
     setIcon(resetIc, 'rotate-ccw');
-    resetBtn.createSpan({ text: 'Reset' });
+    resetBtn.createSpan({ text: '重置' });
     resetBtn.addEventListener('click', () => {
       this.draft = { match: 'all', rules: [] };
       this.onOpen(); // full re-render
@@ -496,7 +489,7 @@ export class FilterModal extends Modal {
 
     const applyBtn = rightGroup.createEl('button', {
       cls: 'lc-fm__apply mod-cta',
-      text: 'Apply',
+      text: '应用',
     });
     applyBtn.addEventListener('click', () => {
       // Phase 5.2 D-04 — strip any `__autoDefault` markers from the draft
