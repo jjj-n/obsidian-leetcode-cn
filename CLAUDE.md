@@ -24,15 +24,15 @@
 
 ## 架构
 
-入口 `src/main.ts` 按 8 步装配：SettingsStore 加载 → `installRequestUrlFetcher()`（**必须**在 LeetCodeClient 构造前，否则 Credential.init 的预热请求直接打 cross-fetch 而 CORS 失败）→ LeetCodeClient + `reauthenticate()` → AuthService → ProblemListService → NoteWriter → SettingsTab → 注册命令。
+入口 `src/main.ts` 按序装配：SettingsStore 加载 → `installRequestUrlFetcher()`（**必须**在 LeetCodeClient 构造前，否则 Credential.init 的预热请求直接打 cross-fetch 而 CORS 失败）→ LeetCodeClient + `reauthenticate()` → AuthService → ProblemListService → NoteWriter → SettingsTab → `registerView`（题目浏览器视图 + ribbon 图标）→ 命令注册。
 
 | 模块 | 职责 |
 |---|---|
-| `src/api/` | `LeetCodeClient`（@leetnotion 封装）+ 三个 cn 适配器（题面 `LeetCodeCNAdapter` / 题解 `LeetCodeCNSolutionAdapter` / AC 提交 `LeetCodeCNSubmissionAdapter`）+ `requestUrlFetcher`（fetcher shim + 节流）+ `throttle`（429 退避重试、超时） |
+| `src/api/` | `LeetCodeClient`（@leetnotion 封装 + region 分派统一入口：`getProblemDetail` / `getProblemListPage`（cn/com 题库分页）/ `searchCNProblems` / `fetchWhoami`）+ 三个 cn 适配器文件（`LeetCodeCNAdapter`：题面 / 服务端搜索 / 题库分页；`LeetCodeCNSolutionAdapter`：题解；`LeetCodeCNSubmissionAdapter`：AC 提交）+ `requestUrlFetcher`（fetcher shim + 节流）+ `throttle`（429 退避重试、超时）。**cn 列表端点实测差异**（2026-08 smoke）：字段是 `paidOnly`（非 `isPaidOnly`）、status 枚举为 `SOLVED`/`ATTEMPTED`/`NOT_STARTED`（非 ac/notac）、`acRate` 为 0-1 小数——适配器内统一归一到插件词汇表 |
 | `src/auth/` | `AuthService`（嵌入式 BrowserWindow 登录、`loginManual` 手动 cookie、登出清 cookie 分区）+ `BrowserWindowLogin` |
 | `src/browse/` | 题目浏览器：`ProblemBrowserView`（侧边栏 ItemView，ribbon 图标 + `打开题目浏览器` 命令；搜索框、难度/状态快捷 chips、`FilterModal` 高级筛选、slice+滚动加载列表、底部计数/索引时间/未登录提示；决策逻辑全部在导出的纯函数里）、`ProblemListService`（全量索引分页拉取、24h TTL、region 标记、单飞）、`QuickProblemSearchModal`（已实现未接命令，保留）、`FilterModal` |
 | `src/notes/` | 核心管道。`NoteWriter`（公开方法：`openProblem` / `addProblemToNote` / `forceRefresh` / `refreshSolution` / `refreshSingleAnchor` / `refreshProblemAnchors` / `refreshAllNoteAnchors`）、`NoteTemplate`（`{id}. {题名}.md` 文件名（含非法字符清洗与旧命名 lc-slug 兜底扫描）、frontmatter 写入器、正文骨架）、`TemplateEngine`（14 个内置占位符 + 自定义占位符引用展开）、`htmlToMarkdown`（turndown 管道，确定性输出有 snapshot 测试）、`AnchorParser`/`AnchorRewriter`（锚点解析与重写）、`SolutionMarker`（`题解链接:` 标记吸收）、`ImageDownloader`、`PasteSanitizer`、`BaseFile`、`HeadingRegion` |
-| `src/settings/` | `SettingsStore`（`data.json` 唯一读写入口，全字段 sanitize 守卫）+ `SettingsTab`（中文界面：登录/站点/笔记/图片/自定义占位符） |
+| `src/settings/` | `SettingsStore`（`data.json` 唯一读写入口，活字段全 sanitize 守卫；已删功能的孤儿字段策略为**读取容忍、写出丢弃**——load 忽略老键，下次 persist 自然消失）+ `SettingsTab`（中文界面：登录/站点/笔记/图片/自定义占位符） |
 | `src/ui/` | `FetchProblemModal`（核心入口 + `parseProblemSlug` / `classifyFetchInput` 输入路由：URL/slug 直取，中文题名、含空格关键词、纯数字走 `searchCNProblems` 服务端搜索 → `ProblemSearchResultModal` 选择）、`SolutionUrlModal` / `RefreshScopeModal`（回调类型统一 `void | Promise<void>`） |
 | `src/shared/` | `logger`（cookie 脱敏，禁止打印 LEETCODE_SESSION）、`errors`、`timers` |
 
@@ -50,7 +50,7 @@
 - 类型纪律：`no-explicit-any` 零容忍（当前 lint 全绿）。测试 mock 沿用 `as never` 惯例；mock 对象放 `tests/helpers/`（`obsidian-stub` mock 整个 `obsidian` 模块、`mock-vault`、`mock-leetcode-client`）。
 - UI 文案规范由 `eslint-plugin-obsidianmd` 强制：英文 sentence case、命令名不含插件名。已有定向豁免：URL 占位符的 sentence-case（大写主机名会使 URL 失效）。
 - 提交信息格式：`type(scope): 中文描述`；**每次改动后 `npm run ci`（lint + test + build + bundle-size）全绿再提交**。
-- 构建产物 `main.js` 由 CI 门禁：硬上限 1.8 MB、1.76 MB 起警告，当前约 137 KB。
+- 构建产物 `main.js` 由 CI 门禁：硬上限 1.8 MB、1.76 MB 起警告，当前约 146 KB；`styles.css` 无门禁（当前 18 KB，2026-08 已按类名引用比对清光死样式）。
 
 ## Obsidian 商店审核红线（上架前逐条自查）
 
@@ -62,7 +62,7 @@
 
 ## 测试
 
-- vitest，460 个用例；`npm test` 约 15s
+- vitest，460 个用例；`npm test` 约 20–40s（Windows 实测）
 - `tests/fixtures/`：真实 LC 题面 HTML 样本（two-sum、median、valid-number、regex）+ GraphQL 响应样本
 - `htmlToMarkdown` 有确定性 snapshot 测试——改动转换管道时先跑 `tests/htmlToMarkdown-snapshots.test.ts` 看差异再决定是否更新快照
 - 已知测试日志噪音：`cache-ttl.test.ts` 会故意打印 `getRegion is not a function` 被吞掉的 TypeError——那是 mock 缺方法以验证"后台刷新失败静默"的预期行为，不是 bug

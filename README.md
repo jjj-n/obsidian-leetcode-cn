@@ -23,7 +23,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 - 抓取题面：HTML → Obsidian Markdown，数学公式、上下标、代码块、图片格式全部保留
 - 抓取你的 AC 提交代码（无提交时回退到题目 starter code）
 - 抓取社区题解文章，自动拆分为代码（`## 题解`）与思路（`## 题解思路`）
-- 笔记模板 + 13 个内置占位符（`{{problem}}` / `{{code}}` / `{{solution}}` 等）+ 自定义占位符（可引用内置占位符）
+- 笔记模板 + 14 个内置占位符（`{{problem}}` / `{{code}}` / `{{solution}}` 等）+ 自定义占位符（可引用内置占位符）
 - 支持全部 8 种 LC 语言（Python、Java、C++、C、JavaScript、TypeScript、Go、Rust）
 - 多题一笔记（锚点系统）+ 一题多解法（多个 `lc:solution` 锚点）
 - 可选图片下载到 vault，笔记完全离线可读
@@ -34,7 +34,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 - Fetch problem statements: HTML → Obsidian Markdown with math/sup/sub/code/images preserved
 - Fetch your AC submission code (falls back to the problem's starter code)
 - Fetch community solution articles, auto-split into code (`## 题解`) and approach (`## 题解思路`)
-- Configurable note template + 13 built-in placeholders (`{{problem}}` / `{{code}}` / `{{solution}}`, etc.) + custom placeholders that can reference built-ins
+- Configurable note template + 14 built-in placeholders (`{{problem}}` / `{{code}}` / `{{solution}}`, etc.) + custom placeholders that can reference built-ins
 - All 8 LC languages (Python, Java, C++, C, JavaScript, TypeScript, Go, Rust)
 - Multi-problem-per-note (anchor system) + multi-solution-per-problem (multiple `lc:solution` anchors)
 - Optional image download into the vault; notes fully readable offline

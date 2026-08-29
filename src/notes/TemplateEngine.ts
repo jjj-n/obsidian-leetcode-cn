@@ -1,6 +1,6 @@
 // src/notes/TemplateEngine.ts
 // Ticket #5 — template placeholder engine.
-// Renders user-configurable note templates with 12 built-in placeholders
+// Renders user-configurable note templates with 14 built-in placeholders
 // + support for user-defined custom placeholders (Settings).
 
 /** All data available for template rendering. */
