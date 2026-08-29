@@ -2,12 +2,13 @@
 // Pure-logic service — no DOM. Consumed by ProblemBrowserView (Plan 06).
 //
 // Responsibilities (Plan 05):
-//   - refresh()  : BROWSE-02 — page LC.problems({ limit, offset }) with PAGE_SIZE=50
-//                   until a short page, populate IndexedProblem.status from q.status,
+//   - refresh()  : BROWSE-02 — page client.getProblemListPage({ limit, skip }) with
+//                   PAGE_SIZE=50 until a short page or the reported total,
+//                   populate IndexedProblem.status from q.status,
 //                   persist via SettingsStore, honor 24h TTL.
 //   - search()   : BROWSE-03 — in-memory case-insensitive title substring OR id-prefix.
 //   - filter()   : BROWSE-04 — in-memory multi-select on difficulty AND status.
-import type { LeetCodeClient } from '../api/LeetCodeClient';
+import type { LeetCodeClient, ProblemListRow } from '../api/LeetCodeClient';
 import type { SettingsStore, CompoundFilter, FilterRule } from '../settings/SettingsStore';
 import type { IndexedProblem, ProblemIndex } from './types';
 
@@ -25,26 +26,12 @@ export interface RefreshProgress {
 }
 export type RefreshProgressCallback = (p: RefreshProgress) => void;
 
-// LC's problemsetQuestionList result shape (verified in 01-RESEARCH.md).
-interface LcQuestion {
-  questionFrontendId: string;
-  titleSlug: string;
-  title: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  isPaidOnly: boolean;
-  // User progress on this problem. 'ac' = solved, 'notac' = attempted, null = untouched.
-  status?: 'ac' | 'notac' | null;
-  // Acceptance rate — LC returns a number (0-100) with fractional precision.
-  acRate?: number;
-  // Topic tags — each tag has a slug (stable key) and a human name.
-  topicTags?: Array<{ slug?: string; name?: string }>;
-}
-
-/** Map LC's `q.status` into the `IndexedProblem.status` vocabulary (BROWSE-04 status dim). */
-function mapStatus(s: LcQuestion['status']): NonNullable<IndexedProblem['status']> {
+/** Map LC's `q.status` ('ac' | 'notac' | null, null when anonymous) into the
+ *  `IndexedProblem.status` vocabulary (BROWSE-04 status dim). */
+function mapStatus(s: ProblemListRow['status']): NonNullable<IndexedProblem['status']> {
   if (s === 'ac') return 'solved';
   if (s === 'notac') return 'attempted';
-  // null, undefined, or any unrecognized future LC value → neutral 'untouched' (T-05-06).
+  // null or any unrecognized future LC value → neutral 'untouched' (T-05-06).
   return 'untouched';
 }
 
@@ -101,16 +88,15 @@ export class ProblemListService {
     const all: IndexedProblem[] = [];
     let offset = 0;
     let total: number | null = null;
-    // Paginate with limit=50 (D-07). LC lib param is `offset` (not `skip`).
-    // Loop terminates on a short page (page.questions.length < PAGE_SIZE) — T-05-01.
+    // Paginate with limit=50 (D-07). Loop terminates on a short page OR when
+    // the reported total is reached — the total check is load-bearing on cn,
+    // where the last page can be exactly PAGE_SIZE (the short-page signal
+    // never fires). T-05-01.
     for (;;) {
-      const page = (await this.client.lc.problems({
+      const page = await this.client.getProblemListPage({
         limit: PAGE_SIZE,
-        offset,
-      } as unknown as Parameters<typeof this.client.lc.problems>[0])) as unknown as {
-        questions: LcQuestion[];
-        total?: number;
-      };
+        skip: offset,
+      });
       if (total === null && typeof page.total === 'number') {
         total = page.total;
       }
@@ -127,18 +113,21 @@ export class ProblemListService {
           : [];
         const row: IndexedProblem = {
           id: Number(q.questionFrontendId),
+          frontendId: q.questionFrontendId,
           slug: q.titleSlug,
           title: q.title,
+          titleCn: q.titleCn || undefined,
           diff: q.difficulty,
           paid: q.isPaidOnly,
-          status: mapStatus(q.status ?? null),
+          status: mapStatus(q.status),
           acRate: typeof q.acRate === 'number' ? q.acRate : undefined,
           topics: topics.length > 0 ? topics : undefined,
         };
         all.push(row);
         batch.push(row);
       }
-      const isLast = page.questions.length < PAGE_SIZE;
+      const isLast =
+        page.questions.length < PAGE_SIZE || (total !== null && all.length >= total);
       if (onProgress && batch.length > 0) {
         onProgress({ loaded: all.length, total, rows: batch, done: isLast });
       }

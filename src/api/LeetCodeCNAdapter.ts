@@ -5,7 +5,7 @@
 // This adapter re-issues the same problem query through the cn transport,
 // preferring translatedContent (Chinese) over content (English).
 import type { LeetCodeCN } from '@leetnotion/leetcode-api';
-import type { LeetCodeProblemDetail } from './LeetCodeClient';
+import type { LeetCodeProblemDetail, ProblemListPage } from './LeetCodeClient';
 
 const PROBLEM_QUERY = `
   query problem($titleSlug: String!) {
@@ -162,4 +162,95 @@ export async function fetchCNProblemSearch(
       slug: r.titleSlug as string,
       difficulty: normalizeListDifficulty(r.difficulty),
     }));
+}
+
+// Full-index pagination over the same problemsetQuestionList endpoint as
+// SEARCH_QUERY, but WITHOUT searchKeywords (filters: {} = the whole problemset)
+// and with the extra index fields. Smoke-verified against leetcode.cn (2026-08):
+// - the node type is QuestionLightNode — `paidOnly`, NOT `isPaidOnly` (400s);
+// - `status` uses the cn enum SOLVED / ATTEMPTED / NOT_STARTED (NOT ac/notac),
+//   and NOT_STARTED for anonymous requests;
+// - `acRate` is a 0-1 fraction (0.5521…), normalized to 0-100 below;
+// - `total` covers the whole cn problemset (~4400 incl. LCR/LCCI books).
+// Drives ProblemListService.refresh for the problem browser.
+const INDEX_QUERY = `
+  query problemList($filters: QuestionListFilterInput, $limit: Int, $skip: Int) {
+    problemsetQuestionList(filters: $filters, limit: $limit, skip: $skip) {
+      total
+      questions {
+        frontendQuestionId title titleSlug titleCn difficulty
+        status acRate paidOnly
+        topicTags { slug }
+      }
+    }
+  }
+`;
+
+interface IndexQueryResponse {
+  data?: {
+    problemsetQuestionList?: {
+      total?: number;
+      questions?: Array<{
+        frontendQuestionId?: string;
+        title?: string;
+        titleSlug?: string;
+        titleCn?: string | null;
+        // This endpoint returns UPPERCASE difficulty — normalized below.
+        difficulty?: string;
+        // cn enum on QuestionLightNode — mapped onto the .com 'ac'/'notac' vocabulary.
+        status?: 'SOLVED' | 'ATTEMPTED' | 'NOT_STARTED' | null;
+        /** 0-1 fraction on cn (smoke-verified) — multiplied by 100 below. */
+        acRate?: number;
+        paidOnly?: boolean;
+        topicTags?: Array<{ slug?: string }>;
+      }>;
+    } | null;
+  };
+}
+
+/** Map cn's list status enum onto the shared 'ac' | 'notac' | null vocabulary
+ *  (matching what .com's problemsetQuestionList returns natively). */
+function mapCNListStatus(
+  s: 'SOLVED' | 'ATTEMPTED' | 'NOT_STARTED' | null | undefined,
+): 'ac' | 'notac' | null {
+  if (s === 'SOLVED') return 'ac';
+  if (s === 'ATTEMPTED') return 'notac';
+  return null;
+}
+
+/** Fetch ONE page of the full leetcode.cn problemset (limit/skip pagination).
+ *  Same normalization posture as fetchCNProblemSearch: UPPERCASE difficulty
+ *  normalized, null titleCn → '', slug-less rows dropped. `status` is null when
+ *  not signed in (cn reports NOT_STARTED for anonymous requests). */
+export async function fetchCNProblemListPage(
+  lcCN: InstanceType<typeof LeetCodeCN>,
+  opts: { limit: number; skip: number },
+): Promise<ProblemListPage> {
+  const resp = await lcCN.graphql({
+    query: INDEX_QUERY,
+    variables: {
+      filters: {},
+      limit: opts.limit,
+      skip: opts.skip,
+    },
+  }) as IndexQueryResponse;
+
+  const list = resp?.data?.problemsetQuestionList;
+  const questions = (list?.questions ?? [])
+    .filter((r) => typeof r.titleSlug === 'string' && r.titleSlug.length > 0)
+    .map((r) => ({
+      questionFrontendId: r.frontendQuestionId ?? '',
+      titleSlug: r.titleSlug as string,
+      title: r.title ?? '',
+      titleCn: typeof r.titleCn === 'string' ? r.titleCn : '',
+      difficulty: normalizeListDifficulty(r.difficulty),
+      isPaidOnly: r.paidOnly === true,
+      status: mapCNListStatus(r.status),
+      acRate: typeof r.acRate === 'number' ? r.acRate * 100 : undefined,
+      topicTags: Array.isArray(r.topicTags) ? r.topicTags : undefined,
+    }));
+  return {
+    questions,
+    total: typeof list?.total === 'number' ? list.total : null,
+  };
 }

@@ -8,7 +8,33 @@
 import { LeetCodeAdvanced, LeetCodeCN, Credential, CredentialCN } from '@leetnotion/leetcode-api';
 import type { PastContests, ContestQuestions } from '@leetnotion/leetcode-api';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { fetchCNProblemDetail, fetchCNProblemSearch } from './LeetCodeCNAdapter';
+import { fetchCNProblemDetail, fetchCNProblemSearch, fetchCNProblemListPage } from './LeetCodeCNAdapter';
+
+/** One normalized row from the problemsetQuestionList page fetch — the common
+ *  shape both regions (cn graphql adapter / .com lc.problems) are mapped onto,
+ *  so ProblemListService consumes a single row type regardless of region. */
+export interface ProblemListRow {
+  /** Display id verbatim from LC — usually numeric, but also "LCR 007",
+   *  "面试题 17.09", "剑指 Offer 09" for interview/LCR books. */
+  questionFrontendId: string;
+  titleSlug: string;
+  title: string;
+  /** cn Chinese title (titleCn field); empty string on .com and when LC omitted it. */
+  titleCn: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  isPaidOnly: boolean;
+  /** User progress: 'ac' = solved, 'notac' = attempted, null = anonymous/untouched. */
+  status: 'ac' | 'notac' | null;
+  /** Acceptance rate 0-100, when LC reported it. */
+  acRate?: number;
+  topicTags?: Array<{ slug?: string }>;
+}
+
+export interface ProblemListPage {
+  questions: ProblemListRow[];
+  /** LC's reported total problem count (cn carries it on page 1); null when unknown. */
+  total: number | null;
+}
 
 /** LC's `question` object as returned by `lc.problem(slug)`.
  *  Only the fields we consume are declared; LC returns additional fields we ignore.
@@ -170,6 +196,47 @@ export class LeetCodeClient {
     limit = 20,
   ): Promise<import('./LeetCodeCNAdapter').CNProblemSearchHit[]> {
     return fetchCNProblemSearch(this.lcCN, keyword, limit);
+  }
+
+  /** Fetch ONE page of the full problem list (problemsetQuestionList), region-
+   *  dispatched like getProblemDetail. cn goes through the graphql adapter
+   *  (fetchCNProblemListPage); .com maps the @leetnotion `lc.problems()` result
+   *  onto the same ProblemListRow shape (titleCn always ''). Rows without a
+   *  slug are dropped so downstream id/slug addressing stays sound.
+   *  Network errors propagate — callers (ProblemListService) branch on them. */
+  async getProblemListPage(opts: { limit: number; skip: number }): Promise<ProblemListPage> {
+    if (this.settings.getRegion() === 'cn') {
+      return fetchCNProblemListPage(this.lcCN, opts);
+    }
+    const page = await (this.lc as unknown as {
+      problems: (o: { limit: number; offset: number }) => Promise<{
+        questions?: Array<{
+          questionFrontendId?: string;
+          titleSlug?: string;
+          title?: string;
+          difficulty?: 'Easy' | 'Medium' | 'Hard';
+          isPaidOnly?: boolean;
+          status?: 'ac' | 'notac' | null;
+          acRate?: number;
+          topicTags?: Array<{ slug?: string }>;
+        }>;
+        total?: number;
+      }>;
+    }).problems({ limit: opts.limit, offset: opts.skip });
+    const questions: ProblemListRow[] = (page.questions ?? [])
+      .filter((q) => typeof q.titleSlug === 'string' && q.titleSlug.length > 0)
+      .map((q) => ({
+        questionFrontendId: q.questionFrontendId ?? '',
+        titleSlug: q.titleSlug as string,
+        title: q.title ?? '',
+        titleCn: '',
+        difficulty: q.difficulty ?? 'Medium',
+        isPaidOnly: q.isPaidOnly ?? false,
+        status: q.status ?? null,
+        acRate: typeof q.acRate === 'number' ? q.acRate : undefined,
+        topicTags: Array.isArray(q.topicTags) ? q.topicTags : undefined,
+      }));
+    return { questions, total: typeof page.total === 'number' ? page.total : null };
   }
 
   /** Phase 10 CONTEST-01 — fetch past contests with pagination support.

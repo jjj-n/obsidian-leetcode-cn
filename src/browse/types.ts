@@ -1,7 +1,14 @@
 export interface IndexedProblem {
   id: number;                       // questionFrontendId parsed to number
+  /** questionFrontendId verbatim — the display form. Kept because ids like
+   *  "LCR 007" / "面试题 17.09" don't parse to a number (id becomes NaN);
+   *  views render this string instead of `id` when present. */
+  frontendId?: string;
   slug: string;                     // titleSlug
   title: string;
+  /** Chinese title from cn's titleCn field. Optional: absent on .com rows and
+   *  legacy cached indexes — display falls back to `title` via displayTitle(). */
+  titleCn?: string;
   diff: 'Easy' | 'Medium' | 'Hard';
   paid: boolean;
   /**

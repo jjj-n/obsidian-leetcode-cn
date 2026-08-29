@@ -11,25 +11,29 @@ function makeMockQuestion(
     questionFrontendId: String(n),
     titleSlug: `problem-${n}`,
     title: `Problem ${n}`,
+    titleCn: '',
     difficulty: diff,
     isPaidOnly: false,
     status,
   };
 }
 
-function makeMockClient(pages: number[]) {
-  const problems = vi.fn(async ({ offset }: { limit: number; offset: number }) => {
-    const pageIdx = offset / PAGE_SIZE;
+/** Mock client exposing the unified getProblemListPage() surface.
+ *  `pages[i]` = row count of page i; `total` = LC-reported total (null = unknown). */
+function makeMockClient(pages: number[], total: number | null = null) {
+  const getProblemListPage = vi.fn(async ({ skip }: { limit: number; skip: number }) => {
+    const pageIdx = skip / PAGE_SIZE;
     const count = pages[pageIdx] ?? 0;
-    const start = offset + 1;
+    const start = skip + 1;
     // Rotate statuses to assert mapping logic covers all three buckets.
     const rot: Array<'ac' | 'notac' | null> = ['ac', 'notac', null];
     return {
       questions: Array.from({ length: count }, (_, i) =>
         makeMockQuestion(start + i, 'Easy', rot[(start + i) % 3])),
+      total,
     };
   });
-  return { lc: { problems } };
+  return { getProblemListPage };
 }
 
 function makeMockSettings(initial: ProblemIndex | null = null) {
@@ -50,10 +54,62 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     const result = await svc.refresh(true);
 
     expect(result).toHaveLength(107);
-    expect(client.lc.problems).toHaveBeenCalledTimes(3);
-    expect(client.lc.problems).toHaveBeenNthCalledWith(1, { limit: PAGE_SIZE, offset: 0 });
-    expect(client.lc.problems).toHaveBeenNthCalledWith(2, { limit: PAGE_SIZE, offset: 50 });
-    expect(client.lc.problems).toHaveBeenNthCalledWith(3, { limit: PAGE_SIZE, offset: 100 });
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(3);
+    expect(client.getProblemListPage).toHaveBeenNthCalledWith(1, { limit: PAGE_SIZE, skip: 0 });
+    expect(client.getProblemListPage).toHaveBeenNthCalledWith(2, { limit: PAGE_SIZE, skip: 50 });
+    expect(client.getProblemListPage).toHaveBeenNthCalledWith(3, { limit: PAGE_SIZE, skip: 100 });
+  });
+
+  it('stops on the reported total when the last page is exactly PAGE_SIZE (cn shape)', async () => {
+    // One full page + total=50: the short-page signal never fires; the total
+    // check must terminate the loop after page 1.
+    const client = makeMockClient([50], 50);
+    const settings = makeMockSettings(null);
+    const svc = new ProblemListService(client as never, settings as never);
+    const result = await svc.refresh(true);
+
+    expect(result).toHaveLength(50);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps titleCn and frontendId onto IndexedProblem rows', async () => {
+    const client = {
+      getProblemListPage: vi.fn(async () => ({
+        questions: [
+          {
+            questionFrontendId: '1',
+            titleSlug: 'two-sum',
+            title: 'Two Sum',
+            titleCn: '两数之和',
+            difficulty: 'Easy',
+            isPaidOnly: false,
+            status: 'ac',
+          },
+          {
+            questionFrontendId: 'LCR 007',
+            titleSlug: '3sum-lcr',
+            title: '3Sum LCR',
+            titleCn: '',
+            difficulty: 'Medium',
+            isPaidOnly: true,
+            status: null,
+          },
+        ],
+        total: 2,
+      })),
+    };
+    const settings = makeMockSettings(null);
+    const svc = new ProblemListService(client as never, settings as never);
+    const result = await svc.refresh(true);
+
+    expect(result[0]).toMatchObject({
+      frontendId: '1', titleCn: '两数之和', status: 'solved',
+    });
+    // "LCR 007" does not parse to a number — the verbatim frontendId must be
+    // preserved so views can render it instead of NaN.
+    expect(result[1]).toMatchObject({
+      id: Number.NaN, frontendId: 'LCR 007', titleCn: undefined, status: 'untouched', paid: true,
+    });
   });
 
   it('persists the fetched index via SettingsStore, with status populated on every row', async () => {
@@ -90,7 +146,7 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     const result = await svc.refresh(false);
 
     expect(result).toEqual(fresh.problems);
-    expect(client.lc.problems).toHaveBeenCalledTimes(0);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(0);
   });
 
   it('re-fetches when cache is stale (>24h)', async () => {
@@ -103,7 +159,7 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     const svc = new ProblemListService(client as never, settings as never);
     const result = await svc.refresh(false);
 
-    expect(client.lc.problems).toHaveBeenCalledTimes(1);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(1);
     expect(result).toHaveLength(10);
   });
 
@@ -113,8 +169,21 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     const svc = new ProblemListService(client as never, settings as never);
     const result = await svc.refresh(false);
 
-    expect(client.lc.problems).toHaveBeenCalledTimes(1);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(1);
     expect(result).toHaveLength(3);
+  });
+
+  it('emits progress ticks carrying the reported total (cn first page knows it)', async () => {
+    const client = makeMockClient([50, 10], 60);
+    const settings = makeMockSettings(null);
+    const svc = new ProblemListService(client as never, settings as never);
+    const ticks: Array<{ loaded: number; total: number | null; done: boolean }> = [];
+    await svc.refresh(true, (p) => ticks.push({ loaded: p.loaded, total: p.total, done: p.done }));
+
+    expect(ticks).toEqual([
+      { loaded: 50, total: 60, done: false },
+      { loaded: 60, total: 60, done: true },
+    ]);
   });
 
   it('single-flight: concurrent refresh() calls share one paginate pass (WR-03)', async () => {
@@ -125,7 +194,7 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     // Without the single-flight guard, both would race and issue ~6 total
     // fetches (3 pages each). With the guard, only 3 fetches total fire.
     const [a, b] = await Promise.all([svc.refresh(true), svc.refresh(true)]);
-    expect(client.lc.problems).toHaveBeenCalledTimes(3);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(3);
     expect(a).toBe(b); // same resolved array reference
     expect(a).toHaveLength(107);
   });
@@ -137,6 +206,6 @@ describe('ProblemListService.refresh (BROWSE-02)', () => {
     await svc.refresh(true);
     await svc.refresh(true);
     // Two sequential (awaited) calls → two paginate passes (1 page each).
-    expect(client.lc.problems).toHaveBeenCalledTimes(2);
+    expect(client.getProblemListPage).toHaveBeenCalledTimes(2);
   });
 });
