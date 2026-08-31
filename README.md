@@ -63,7 +63,7 @@ Fetch leetcode.cn problems, your AC submissions, and community solutions into yo
 
 v2 远期方向（暂不承诺）：AI 题解审查、竞赛支持、快速搜索命令（`QuickProblemSearchModal` 已实现待接线）。
 
-**Current state:** the eight commands above are available today, including the `Fetch problem` core entry and the problem browser sidebar. Store submission is next on the roadmap. v2 directions (not promised): AI review, contest support.
+**Current state:** the eight commands above are available today, including the `Fetch problem` core entry and the problem browser sidebar. Store submission is next on the roadmap. v2 directions (not promised): AI review, contest support, quick-search command (`QuickProblemSearchModal` implemented, unwired).
 
 ## 安装 / Install
 
@@ -124,7 +124,7 @@ class Solution: …
 <!-- /lc:solution -->
 ```
 
-- 题解锚点 `source` 支持 `url`（社区题解链接）/ `ac`（你的 AC 提交）/ `official`（官方题解）/ `starter`（题目初始代码）；同一题可以有多个 `lc:solution` 锚点（多解法），一篇笔记可以包含多道题（多题一笔记）
+- `leetcode.cn` — GraphQL API（`/graphql`）：抓取题目详情、题库列表（题目浏览器索引，分页拉取）、题名搜索、用户 AC 提交、社区题解文章、登录态校验。
 
 - Notes live in the configurable problems folder (default `LeetCode/`) as `{id}. {题名}.md`（如 `1. 两数之和.md`）
 - The default template follows a Chinese property vocabulary for practice notes: `created` / `分类` (auto-filled with official cn topic labels, e.g. `数组、哈希表`) / `难度` (简单/中等/困难) / `分数` / `情况` / `时间复杂度` / `空间复杂度` / `备注` / `tags` (`leetcode` + language). The plugin maintains only three internal keys — `lc-slug` / `lc-language` / `lc-status` (`lc-status` never regresses from solved); identity keys from older versions (`lc-id`, `lc-url`, …) are removed on re-open; `tags` is union-merged with your manual entries
@@ -150,13 +150,11 @@ class Solution: …
 
 本插件仅与以下主机通信 / This plugin communicates with the following hosts only：
 
-- `leetcode.cn` — GraphQL API（`/graphql`）：抓取题目详情、用户 AC 提交、社区题解文章、官方题解。
-- `leetcode.cn` — REST API：用户认证、题目标签索引。
+- `leetcode.cn` — GraphQL API（`/graphql`）：抓取题目详情、题库列表（题目浏览器索引，分页拉取）、题名搜索、用户 AC 提交、社区题解文章、登录态校验。
 - `pic.leetcode-cn.com` — 题面和题解中的图片 CDN（仅在 Settings → Images 开启"下载图片到 vault"时才下载，否则保留 CDN 链接）。
 - `leetcode.cn/accounts/login/` — 嵌入式浏览器登录页（仅登录时使用）。
 
-- `leetcode.cn` — GraphQL API (`/graphql`): problem details, user AC submissions, community solution articles, official editorial.
-- `leetcode.cn` — REST API: user authentication, problem tag index.
+- `leetcode.cn` — GraphQL API (`/graphql`): problem details, the problemset list (browser index, paginated), title search, user AC submissions, community solution articles, login-state check.
 - `pic.leetcode-cn.com` — image CDN for problem/solution images (only downloaded when Settings → Images → download is ON; otherwise CDN links are preserved).
 - `leetcode.cn/accounts/login/` — embedded browser login page (login only).
 
@@ -177,6 +175,8 @@ Authentication is handled via an embedded `BrowserWindow` that captures your LC 
 - `Couldn't reach LeetCode.` — 无法连接 leetcode.cn（离线、DNS、防火墙）。网络故障不自动重试。/ Your machine cannot reach leetcode.cn (offline, DNS, firewall). Network failures are not auto-retried.
 - `LeetCode is slow to respond.` — LC 超时未响应。稍后手动重试。/ LC timed out. Retry manually in a moment.
 - 题解刷新无反应 — 检查笔记中锚点结构完整（开/闭标签成对、slug 正确），详见[笔记格式](#笔记格式--note-format)。/ Solution refresh does nothing — check that your anchors are well-formed (paired open/close tags, correct slug); see [Note format](#笔记格式--note-format).
+- `同步题库失败，请稍后重试。` — 题目浏览器同步题库时网络或登录状态异常。稍后点浏览器右上角刷新按钮重试；匿名同步无需登录，失败通常是网络问题。/ The problem browser index sync failed (network or session issue). Hit the refresh button in the browser top bar; anonymous sync needs no login, so failures are usually network-related.
+- 浏览器里已做的题显示为「未开始」— 未登录时 AC 状态不可见。设置 -> LeetCode 登录后，点浏览器右上角刷新按钮重新同步。/ Solved problems show as "not started" in the browser — AC status is hidden when logged out. Log in (Settings -> LeetCode), then hit the browser refresh button to re-sync.
 
 ## 发布流程 / Release process
 
@@ -212,7 +212,7 @@ npm run ci     # lint + test + build + bundle-size（提交前必须全绿 / mus
 
 ### 体积门禁 / Bundle size gate
 
-生产构建 `main.js` 由 CI 门禁（`scripts/check-bundle-size.mjs`）：硬上限 1.8 MB，1.76 MB 起警告；当前约 137 KB。/ The production `main.js` is gated by CI: hard ceiling 1.8 MB, warning at 1.76 MB; currently ~137 KB.
+生产构建 `main.js` 由 CI 门禁（`scripts/check-bundle-size.mjs`）：硬上限 1.8 MB，1.76 MB 起警告；当前约 146 KB。/ The production `main.js` is gated by CI: hard ceiling 1.8 MB, warning at 1.76 MB; currently ~146 KB.
 
 ## License
 
